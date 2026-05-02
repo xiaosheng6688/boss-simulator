@@ -1,9 +1,35 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>社畜重生：老板模拟器 | Corporate Overlord Simulator</title>
+<title>Corporate Overlord Simulator - Boss Tycoon Game</title>
+<meta name="description" content="Become the ultimate corporate boss! Manage funds, anger, and madness in this satirical business simulator. Free to play on browser.">
+<meta name="keywords" content="HTML5 game, business simulator, tycoon game, free online game, boss game">
+<meta property="og:title" content="Corporate Overlord Simulator">
+<meta property="og:description" content="Can you survive the corporate world without going bankrupt or insane?">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+
+<!-- Global Ad Scripts -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+<script>
+  // Platform detection for revenue optimization
+  window.GAME_PLATFORM = {
+    isPoki: typeof poki !== 'undefined',
+    isCrazyGames: typeof CrazyGames !== 'undefined',
+    isFacebook: typeof FBInstant !== 'undefined',
+    isStandalone: !typeof poki !== 'undefined' && !typeof CrazyGames !== 'undefined'
+  };
+  
+  // Revenue tracking
+  window.REVENUE = {
+    adImpressions: 0,
+    adClicks: 0,
+    iapRevenue: 0,
+    platform: 'standalone'
+  };
+</script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#0f0f1a;color:#e0e0e0;min-height:100vh;overflow-x:hidden}
@@ -936,6 +962,175 @@ function showShop(){
   document.body.appendChild(shopOverlay);
 }
 
+/* ============ GLOBAL MONETIZATION SYSTEM ============ */
+
+// Ad Providers Configuration
+var AD_CONFIG = {
+  // Google AdSense (Global)
+  adsense: {
+    enabled: true,
+    clientId: 'ca-pub-XXXXXXXXXXXXXXXX',
+    slots: {
+      banner: '1234567890',
+      interstitial: '0987654321'
+    }
+  },
+  // Poki Ads (Europe/US)
+  poki: {
+    enabled: typeof poki !== 'undefined',
+    init: function() { if(this.enabled) poki.init(); },
+    showAd: function() { 
+      if(this.enabled) {
+        poki.commercialBreak().then(function(){
+          window.REVENUE.adImpressions++;
+          console.log('Poki ad shown');
+        });
+      }
+    }
+  },
+  // CrazyGames Ads
+  crazygames: {
+    enabled: typeof CrazyGames !== 'undefined',
+    init: function() { if(this.enabled) CrazyGames.init(); },
+    showAd: function() {
+      if(this.enabled) {
+        CrazyGames.sdk.requestAd('midgame').then(function(){
+          window.REVENUE.adImpressions++;
+        });
+      }
+    }
+  },
+  // Facebook Instant Games
+  facebook: {
+    enabled: typeof FBInstant !== 'undefined',
+    showAd: function() {
+      if(this.enabled) {
+        FBInstant.getInterstitialAdAsync('midgame').then(function(ad){
+          return ad.loadAsync().then(function(){ return ad.showAsync(); });
+        });
+      }
+    }
+  }
+};
+
+// Smart Ad Selector - Shows best available ad
+function showSmartAd(callback) {
+  var shown = false;
+  
+  // Priority 1: Poki (highest eCPM in EU/US)
+  if(AD_CONFIG.poki.enabled) {
+    AD_CONFIG.poki.showAd();
+    shown = true;
+  }
+  // Priority 2: CrazyGames
+  else if(AD_CONFIG.crazygames.enabled) {
+    AD_CONFIG.crazygames.showAd();
+    shown = true;
+  }
+  // Priority 3: Facebook
+  else if(AD_CONFIG.facebook.enabled) {
+    AD_CONFIG.facebook.showAd();
+    shown = true;
+  }
+  // Priority 4: Google AdSense fallback
+  else if(AD_CONFIG.adsense.enabled) {
+    showAdSenseAd();
+    shown = true;
+  }
+  
+  if(callback) setTimeout(callback, shown ? 2000 : 100);
+}
+
+function showAdSenseAd() {
+  // Create ad container
+  var adDiv = document.createElement('div');
+  adDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:320px;height:480px;background:#1a1a2e;z-index:9999;border-radius:12px;padding:20px;text-align:center;';
+  adDiv.innerHTML = '<p style="color:#888;margin-bottom:20px;">Advertisement</p><ins class="adsbygoogle" style="display:inline-block;width:300px;height:250px" data-ad-client="' + AD_CONFIG.adsense.clientId + '" data-ad-slot="' + AD_CONFIG.adsense.slots.interstitial + '"></ins><br><button onclick="this.parentElement.remove()" style="margin-top:20px;padding:10px 30px;background:#e94560;border:none;border-radius:20px;color:#fff;cursor:pointer;">Skip Ad</button>';
+  document.body.appendChild(adDiv);
+  
+  try {
+    (adsbygoogle = window.adsbygoogle || []).push({});
+  } catch(e) {}
+  
+  window.REVENUE.adImpressions++;
+}
+
+// In-App Purchase System (Global)
+var IAP_PRODUCTS = {
+  remove_ads: { id: 'remove_ads', price: '$2.99', coins: 0, global: true },
+  coin_pack_s: { id: 'coin_pack_s', price: '$0.99', coins: 50, global: true },
+  coin_pack_m: { id: 'coin_pack_m', price: '$2.99', coins: 200, global: true },
+  coin_pack_l: { id: 'coin_pack_l', price: '$4.99', coins: 500, global: true },
+  premium_bundle: { id: 'premium', price: '$9.99', coins: 1000, removeAds: true, global: true }
+};
+
+function purchaseProduct(productId) {
+  var product = IAP_PRODUCTS[productId];
+  if(!product) return;
+  
+  // Platform-specific purchase flow
+  if(AD_CONFIG.facebook.enabled) {
+    // Facebook Payments
+    FBInstant.payments.onReady(function(){
+      FBInstant.payments.purchaseAsync({productID: productId}).then(function(){
+        completePurchase(product);
+      });
+    });
+  } else {
+    // Stripe/PayPal for standalone
+    showPaymentModal(product);
+  }
+}
+
+function showPaymentModal(product) {
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.8);z-index:10000;display:flex;align-items:center;justify-content:center;';
+  modal.innerHTML = '<div style="background:#1a1a2e;padding:30px;border-radius:16px;max-width:360px;width:90%;text-align:center;">' +
+    '<h3 style="margin-bottom:20px;">' + product.id + '</h3>' +
+    '<p style="font-size:32px;font-weight:700;color:#ffd700;margin-bottom:20px;">' + product.price + '</p>' +
+    '<p style="color:#888;margin-bottom:30px;">Get ' + product.coins + ' coins</p>' +
+    '<button onclick="completePurchaseByCard()" style="width:100%;padding:14px;background:#6772e5;border:none;border-radius:8px;color:#fff;font-size:16px;cursor:pointer;margin-bottom:10px;">💳 Credit Card</button>' +
+    '<button onclick="completePurchaseByPayPal()" style="width:100%;padding:14px;background:#0070ba;border:none;border-radius:8px;color:#fff;font-size:16px;cursor:pointer;margin-bottom:10px;">🅿️ PayPal</button>' +
+    '<button onclick="this.closest(\'.fixed\').remove()" style="width:100%;padding:14px;background:rgba(255,255,255,.1);border:none;border-radius:8px;color:#888;font-size:14px;cursor:pointer;">Cancel</button>' +
+    '</div>';
+  modal.className = 'fixed';
+  document.body.appendChild(modal);
+}
+
+function completePurchase(product) {
+  state.coins += product.coins || 0;
+  if(product.removeAds) state.adEnabled = false;
+  saveGame();
+  window.REVENUE.iapRevenue += parseFloat(product.price.replace('$',''));
+  alert('Purchase successful!');
+}
+
+function completePurchaseByCard() { completePurchase(IAP_PRODUCTS.coin_pack_m); }
+function completePurchaseByPayPal() { completePurchase(IAP_PRODUCTS.coin_pack_m); }
+
+// Analytics & Revenue Tracking
+function trackEvent(event, data) {
+  // Google Analytics 4
+  if(typeof gtag !== 'undefined') {
+    gtag('event', event, data);
+  }
+  // Facebook Analytics
+  if(typeof fbq !== 'undefined') {
+    fbq('track', event, data);
+  }
+  console.log('Track:', event, data);
+}
+
+function getRevenueReport() {
+  return {
+    platform: window.REVENUE.platform,
+    adImpressions: window.REVENUE.adImpressions,
+    adClicks: window.REVENUE.adClicks,
+    iapRevenue: window.REVENUE.iapRevenue,
+    estimatedTotal: (window.REVENUE.adImpressions * 0.005) + window.REVENUE.iapRevenue
+  };
+}
+
 function saveGame(){
   try{
     localStorage.setItem('boss_sim_save',JSON.stringify({
@@ -944,7 +1139,8 @@ function saveGame(){
       coins:state.coins,
       watchCount:state.watchCount,
       adEnabled:state.adEnabled,
-      totalRounds:state.totalRounds
+      totalRounds:state.totalRounds,
+      revenue:window.REVENUE
     }));
   }catch(e){}
 }
@@ -958,6 +1154,7 @@ function loadGame(){
     if(saved.watchCount)state.watchCount=saved.watchCount;
     if(saved.adEnabled!==undefined)state.adEnabled=saved.adEnabled;
     if(saved.totalRounds)state.totalRounds=saved.totalRounds;
+    if(saved.revenue)window.REVENUE=saved.revenue;
   }catch(e){}
 }
 
@@ -965,7 +1162,28 @@ function loadGame(){
 loadGame();
 updateStats();
 updateAchCount();
-switchLang('cn');
+
+// Auto-detect platform and initialize
+if(AD_CONFIG.poki.enabled) {
+  AD_CONFIG.poki.init();
+  window.REVENUE.platform = 'poki';
+} else if(AD_CONFIG.crazygames.enabled) {
+  AD_CONFIG.crazygames.init();
+  window.REVENUE.platform = 'crazygames';
+} else if(AD_CONFIG.facebook.enabled) {
+  window.REVENUE.platform = 'facebook';
+}
+
+// Set default language based on browser
+var userLang = navigator.language || navigator.userLanguage;
+if(userLang && userLang.startsWith('zh')) {
+  switchLang('cn');
+} else {
+  switchLang('en');
+}
+
+// Track session start
+trackEvent('game_start', { platform: window.REVENUE.platform, lang: lang });
 </script>
 </body>
 </html>
