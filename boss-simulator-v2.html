@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>社畜重生：老板模拟器 | Corporate Overlord Simulator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#0f0f1a;color:#e0e0e0;min-height:100vh;overflow-x:hidden}
+#app{max-width:480px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:20px}
+
+/* ========== SCREENS ========== */
+.screen{display:none;flex-direction:column;min-height:100vh;padding:16px;animation:fadeIn .5s ease}
+.screen.active{display:flex}
+@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+/* ========== START SCREEN ========== */
+#start-screen{justify-content:center;align-items:center;text-align:center;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)}
+.start-emoji{font-size:72px;margin-bottom:16px;animation:bounce 2s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.start-title{font-size:28px;font-weight:800;margin-bottom:8px;background:linear-gradient(90deg,#ffd700,#ff6b35,#e94560);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.start-sub{font-size:14px;color:#888;margin-bottom:32px}
+.start-desc{font-size:13px;color:#aaa;line-height:1.8;margin-bottom:32px;max-width:360px}
+.start-btn{background:linear-gradient(135deg,#e94560,#ff6b35);color:#fff;border:none;padding:16px 48px;border-radius:30px;font-size:18px;font-weight:700;cursor:pointer;transition:all .3s;box-shadow:0 8px 25px rgba(233,69,96,.4)}
+.start-btn:hover{transform:translateY(-2px);box-shadow:0 12px 35px rgba(233,69,96,.5)}
+.start-btn:active{transform:translateY(0)}
+.lang-switch{position:absolute;top:16px;right:16px;display:flex;gap:8px;background:rgba(255,255,255,.08);padding:6px;border-radius:20px}
+.lang-btn{background:none;border:none;color:#888;padding:6px 14px;border-radius:14px;font-size:12px;cursor:pointer;transition:all .3s}
+.lang-btn.active{background:rgba(233,69,96,.3);color:#fff}
+.version-info{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);font-size:11px;color:#555}
+.new-game-plus{display:none;margin-top:16px;padding:12px 20px;background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.3);border-radius:12px;color:#ffd700;font-size:13px}
+.new-game-plus.show{display:block}
+
+/* ========== GAME SCREEN ========== */
+#game-screen{background:#0f0f1a}
+.top-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.round-info{font-size:12px;color:#888;background:rgba(255,255,255,.05);padding:6px 12px;border-radius:12px}
+.achieve-btn{background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3);color:#ffd700;padding:6px 12px;border-radius:12px;font-size:11px;cursor:pointer}
+
+/* Stats */
+.stats{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.stat-row{display:flex;align-items:center;gap:10px}
+.stat-label{width:70px;font-size:12px;font-weight:600}
+.stat-bar-wrap{flex:1;height:22px;background:rgba(255,255,255,.08);border-radius:11px;overflow:hidden;position:relative}
+.stat-bar{height:100%;border-radius:11px;transition:width .5s ease,background .3s}
+.stat-bar.funds{background:linear-gradient(90deg,#27ae60,#2ecc71)}
+.stat-bar.anger{background:linear-gradient(90deg,#e74c3c,#c0392b)}
+.stat-bar.madness{background:linear-gradient(90deg,#9b59b6,#8e44ad)}
+.stat-val{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+
+/* Staff Panel */
+.staff-panel{background:rgba(255,255,255,.03);border-radius:12px;padding:12px;margin-bottom:12px}
+.staff-title{font-size:12px;color:#888;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.staff-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.staff-card{background:rgba(255,255,255,.05);border-radius:8px;padding:8px;text-align:center;font-size:11px;position:relative;transition:all .3s}
+.staff-card.quit{opacity:.3;text-decoration:line-through}
+.staff-card.rebel{border:1px solid #e74c3c}
+.staff-emoji{font-size:24px;margin-bottom:4px}
+.staff-name{font-weight:600;margin-bottom:2px}
+.staff-role{font-size:10px;color:#888}
+.staff-mood{font-size:10px;margin-top:4px;padding:2px 6px;border-radius:6px;display:inline-block}
+.mood-happy{background:rgba(46,204,113,.2);color:#2ecc71}
+.mood-normal{background:rgba(241,196,15,.2);color:#f1c40f}
+.mood-angry{background:rgba(231,76,60,.2);color:#e74c3c}
+
+/* Event Card */
+.event-card{background:linear-gradient(145deg,#1a1a2e,#16213e);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.06);animation:slideUp .4s ease-out}
+@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
+.event-tag{display:inline-block;background:rgba(233,69,96,.15);color:#e94560;padding:4px 10px;border-radius:8px;font-size:11px;font-weight:600;margin-bottom:10px}
+.event-title{font-size:18px;font-weight:700;margin-bottom:10px;color:#fff}
+.event-bg{font-size:13px;line-height:1.7;color:#bbb;margin-bottom:16px}
+
+/* Options */
+.options{display:flex;flex-direction:column;gap:10px}
+.option-btn{display:flex;align-items:flex-start;gap:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px;cursor:pointer;transition:all .2s;text-align:left;color:#e0e0e0;width:100%}
+.option-btn:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);transform:translateX(4px)}
+.option-btn:active{transform:translateX(2px)}
+.option-btn.disabled{opacity:.4;pointer-events:none}
+.opt-letter{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.opt-a .opt-letter{background:rgba(46,204,113,.2);color:#2ecc71}
+.opt-b .opt-letter{background:rgba(231,76,60,.2);color:#e74c3c}
+.opt-c .opt-letter{background:rgba(155,89,182,.2);color:#9b59b6}
+.opt-text{font-size:13px;line-height:1.5;flex:1}
+.effect-hint{font-size:11px;color:#888;margin-top:4px}
+
+/* Chain Event Banner */
+.chain-banner{display:none;background:linear-gradient(90deg,rgba(255,215,0,.15),rgba(255,107,53,.15));border:1px solid rgba(255,215,0,.3);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#ffd700}
+.chain-banner.show{display:block}
+
+/* Toast */
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;gap:16px;z-index:100;pointer-events:none}
+.toast-item{font-size:28px;font-weight:800;animation:toastPop .8s ease-out forwards;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+.toast-item.positive{color:#2ecc71}
+.toast-item.negative{color:#e74c3c}
+@keyframes toastPop{0%{opacity:0;transform:scale(.5)}30%{opacity:1;transform:scale(1.3)}100%{opacity:0;transform:scale(1) translateY(-40px)}}
+
+/* Shake */
+.shake{animation:shake .5s ease-in-out}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+
+/* ========== END SCREEN ========== */
+#end-screen{justify-content:center;align-items:center;text-align:center;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)}
+.end-emoji{font-size:80px;margin-bottom:16px}
+.end-title{font-size:26px;font-weight:800;margin-bottom:12px}
+.end-desc{font-size:14px;color:#bbb;line-height:1.8;margin-bottom:24px;max-width:360px}
+.end-stats{display:flex;gap:20px;margin-bottom:24px;justify-content:center}
+.end-stat{text-align:center}
+.end-stat-val{font-size:24px;font-weight:700}
+.end-stat-label{font-size:11px;color:#888;margin-top:4px}
+.end-buttons{display:flex;flex-direction:column;gap:12px;align-items:center}
+.end-btn{background:linear-gradient(135deg,#e94560,#ff6b35);color:#fff;border:none;padding:14px 40px;border-radius:25px;font-size:16px;font-weight:700;cursor:pointer;transition:all .3s}
+.end-btn:hover{transform:translateY(-2px)}
+.achievements-preview{margin-top:20px;background:rgba(255,255,255,.05);border-radius:12px;padding:16px;max-width:360px;width:100%}
+.achievements-preview h3{font-size:14px;margin-bottom:10px;color:#ffd700}
+.ach-list{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.ach-item{font-size:20px;opacity:.2;transition:all .3s}
+.ach-item.unlocked{opacity:1;filter:drop-shadow(0 0 4px rgba(255,215,0,.5))}
+.share-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;padding:10px 24px;border-radius:20px;font-size:13px;cursor:pointer;margin-top:8px}
+
+/* ========== ACHIEVEMENTS MODAL ========== */
+.modal{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.8);z-index:200;justify-content:center;align-items:center;padding:20px}
+.modal.show{display:flex}
+.modal-content{background:#1a1a2e;border-radius:16px;padding:20px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.modal-title{font-size:18px;font-weight:700}
+.modal-close{background:none;border:none;color:#888;font-size:24px;cursor:pointer}
+.ach-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.ach-cell{text-align:center;padding:10px 6px;background:rgba(255,255,255,.05);border-radius:10px;transition:all .3s}
+.ach-cell.unlocked{background:rgba(255,215,0,.1);border:1px solid rgba(255,215,0,.3)}
+.ach-cell-icon{font-size:28px;margin-bottom:4px}
+.ach-cell-name{font-size:10px;color:#888}
+.ach-cell.unlocked .ach-cell-name{color:#ffd700}
+
+/* ========== SOUND TOGGLE ========== */
+.sound-toggle{position:absolute;top:16px;left:16px;background:rgba(255,255,255,.08);border:none;color:#888;padding:8px;border-radius:50%;cursor:pointer;font-size:16px;width:36px;height:36px;display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+<div id="app">
+<!-- START SCREEN -->
+<div id="start-screen" class="screen active">
+  <button class="sound-toggle" id="sound-toggle" onclick="toggleSound()">🔇</button>
+  <div class="lang-switch">
+    <button class="lang-btn" id="lang-cn" onclick="switchLang('cn')">中文</button>
+    <button class="lang-btn active" id="lang-en" onclick="switchLang('en')">EN</button>
+  </div>
+  <div class="start-emoji">👔</div>
+  <div class="start-title" id="start-title">社畜重生：老板模拟器</div>
+  <div class="start-sub" id="start-sub">Corporate Overlord Simulator</div>
+  <div class="start-desc" id="start-desc">
+    你，一个被996折磨致死的社畜，重生成了霸道总裁。<br>
+    现在，轮到你来"管理"员工了。<br><br>
+    50+ 职场事件 · 100+ 离谱选项 · 6名员工 · 25个成就<br>
+    你能撑到上市，还是会被员工推翻？
+  </div>
+  <button class="start-btn" id="start-btn" onclick="startGame()">开始折磨 · Start Torture</button>
+  <div class="new-game-plus" id="new-game-plus"></div>
+  <div class="version-info">v2.0 · 50+ Events · New Game+</div>
+</div>
+
+<!-- GAME SCREEN -->
+<div id="game-screen" class="screen">
+  <div class="top-bar">
+    <div class="round-info" id="round-info">Round 1 / 20</div>
+    <button class="achieve-btn" onclick="showAchievements()">🏆 <span id="ach-count">0/25</span></button>
+  </div>
+  
+  <div class="stats">
+    <div class="stat-row">
+      <span class="stat-label" id="lbl-funds">💰 资金</span>
+      <div class="stat-bar-wrap">
+        <div class="stat-bar funds" id="funds-bar" style="width:100%"></div>
+        <span class="stat-val" id="funds-val">100</span>
+      </div>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label" id="lbl-anger">😡 愤怒</span>
+      <div class="stat-bar-wrap">
+        <div class="stat-bar anger" id="anger-bar" style="width:0%"></div>
+        <span class="stat-val" id="anger-val">0</span>
+      </div>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label" id="lbl-madness">🤪 疯狂</span>
+      <div class="stat-bar-wrap">
+        <div class="stat-bar madness" id="madness-bar" style="width:0%"></div>
+        <span class="stat-val" id="madness-val">0</span>
+      </div>
+    </div>
+  </div>
+  
+  <div class="staff-panel" id="staff-panel">
+    <div class="staff-title">
+      <span id="staff-title-text">👥 员工状态</span>
+      <span id="staff-count">6/6</span>
+    </div>
+    <div class="staff-grid" id="staff-grid"></div>
+  </div>
+  
+  <div class="chain-banner" id="chain-banner"></div>
+  
+  <div class="event-card" id="event-card">
+    <div class="event-tag" id="event-tag">🕘 周一早会</div>
+    <div class="event-title" id="event-title">周一早晨の突袭</div>
+    <div class="event-bg" id="event-bg">事件描述...</div>
+    <div class="options" id="options-area"></div>
+  </div>
+</div>
+
+<!-- END SCREEN -->
+<div id="end-screen" class="screen">
+  <div class="end-emoji" id="end-emoji">🏆</div>
+  <div class="end-title" id="end-title">游戏结束</div>
+  <div class="end-desc" id="end-desc">结局描述...</div>
+  <div class="end-stats">
+    <div class="end-stat">
+      <div class="end-stat-val" id="end-funds" style="color:#2ecc71">100</div>
+      <div class="end-stat-label" id="end-fl">资金</div>
+    </div>
+    <div class="end-stat">
+      <div class="end-stat-val" id="end-anger" style="color:#e74c3c">0</div>
+      <div class="end-stat-label" id="end-al">愤怒</div>
+    </div>
+    <div class="end-stat">
+      <div class="end-stat-val" id="end-madness" style="color:#9b59b6">0</div>
+      <div class="end-stat-label" id="end-ml">疯狂</div>
+    </div>
+  </div>
+  <div class="end-buttons">
+    <button class="end-btn" id="restart-btn" onclick="restartGame()">再玩一次</button>
+    <button class="share-btn" id="share-btn" onclick="shareResult()">分享成绩</button>
+  </div>
+  <div class="achievements-preview">
+    <h3>🏆 成就进度</h3>
+    <div class="ach-list" id="ach-list"></div>
+  </div>
+</div>
+
+<!-- ACHIEVEMENTS MODAL -->
+<div class="modal" id="ach-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div class="modal-title">🏆 成就列表</div>
+      <button class="modal-close" onclick="hideAchievements()">&times;</button>
+    </div>
+    <div class="ach-grid" id="ach-grid"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+/* ============ LANGUAGE DATA ============ */
+const S={
+  startTitle:{cn:'社畜重生：老板模拟器',en:'Corporate Overlord Simulator'},
+  startSub:{cn:'Corporate Overlord Simulator',en:'Reborn as the Boss. Time for Payback.'},
+  startBtn:{cn:'开始折磨',en:'Start Torture'},
+  startDesc:{
+    cn:'你，一个被996折磨致死的社畜，重生成了霸道总裁。<br>现在，轮到你来"管理"员工了。<br><br>50+ 职场事件 · 100+ 离谱选项 · 6名员工 · 25个成就<br>你能撑到上市，还是会被员工推翻？',
+    en:'You died from 996 burnout. Now you\'re reborn as the CEO.<br>Time to "manage" your employees.<br><br>50+ Events · 100+ Choices · 6 Staff · 25 Achievements<br>Can you survive until IPO, or will they revolt?'
+  },
+  lblFunds:{cn:'💰 资金',en:'💰 Funds'},
+  lblAnger:{cn:'😡 愤怒',en:'😡 Anger'},
+  lblMadness:{cn:'🤪 疯狂',en:'🤪 Madness'},
+  restartBtn:{cn:'再玩一次',en:'Play Again'},
+  roundInfo:{cn:'第 {round} 轮 · 已处理 {done} 件事',en:'Round {round} · {done} Events Handled'},
+  staffTitle:{cn:'👥 员工状态',en:'👥 Staff Status'},
+  endFl:{cn:'资金',en:'Funds'},
+  endAl:{cn:'愤怒',en:'Anger'},
+  endMl:{cn:'疯狂',en:'Madness'},
+  bankrupt:{cn:{title:'💸 公司破产',desc:'你把公司资金链玩断了。现在你和员工一起站在了劳动仲裁的被告席上。'},en:{title:'💸 Bankrupt',desc:'You ran the company into the ground. Now you\'re all in arbitration together.'}},
+  revolt:{cn:{title:'🔥 员工起义',desc:'愤怒值爆表！全体员工集体辞职并把你挂上了脉脉热搜。你的"管理哲学"成为了行业反面教材。'},en:{title:'🔥 Staff Revolt',desc:'Anger maxed out! Everyone quit and you\'re trending on LinkedIn. Your "management philosophy" is now a case study in what NOT to do.'}},
+  insane:{cn:{title:'🌀 精神失常',desc:'疯狂值爆表！你开始穿着睡衣来公司，在全员大会上朗诵《道德经》，并试图用塔罗牌决定产品方向。董事会强制你"休养"。'},en:{title:'🌀 Lost Your Mind',desc:'Madness maxed out! You started wearing pajamas to board meetings and using tarot cards to decide product direction. The board "suggested" you take a break.'}},
+  victory:{cn:{title:'🏆 上市成功',desc:'你成功熬过了所有危机！公司在纳斯达克敲钟，你套现离场，留下一地鸡毛给员工。这就是资本主义的胜利！'},en:{title:'🏆 IPO Success',desc:'You survived every crisis! Your company rang the NASDAQ bell, you cashed out, and left the mess for everyone else. Capitalism wins!'}}
+};
+
+/* ============ STAFF SYSTEM ============ */
+const STAFF_TEMPLATE=[
+  {id:'wang',emoji:'👨‍💻',name:{cn:'王工',en:'Dave'},role:{cn:'技术总监',en:'Tech Lead'},resignThreshold:80,rebelThreshold:60},
+  {id:'li',emoji:'👩‍💼',name:{cn:'李经理',en:'Sarah'},role:{cn:'产品经理',en:'Product Mgr'},resignThreshold:75,rebelThreshold:55},
+  {id:'zhang',emoji:'👨‍🎨',name:{cn:'张设计',en:'Alex'},role:{cn:'UI设计师',en:'Designer'},resignThreshold:70,rebelThreshold:50},
+  {id:'chen',emoji:'👩‍🔬',name:{cn:'陈测试',en:'Emily'},role:{cn:'测试工程师',en:'QA Engineer'},resignThreshold:85,rebelThreshold:65},
+  {id:'liu',emoji:'👨‍💻',name:{cn:'刘前端',en:'Mike'},role:{cn:'前端开发',en:'Frontend Dev'},resignThreshold:72,rebelThreshold:52},
+  {id:'zhao',emoji:'👩‍💻',name:{cn:'赵后端',en:'Lisa'},role:{cn:'后端开发',en:'Backend Dev'},resignThreshold:78,rebelThreshold:58}
+];
+
+/* ============ ACHIEVEMENTS ============ */
+const ACHIEVEMENTS=[
+  {id:'first_blood',icon:'🩸',name:{cn:'初尝权力',en:'First Blood'},desc:{cn:'第一次选择极端选项',en:'First extreme choice'}},
+  {id:'madness_50',icon:'🤪',name:{cn:'半疯半醒',en:'Half Mad'},desc:{cn:'疯狂值达到50',en:'Reach 50 Madness'}},
+  {id:'anger_50',icon:'😤',name:{cn:'众怒难犯',en:'Angry Mob'},desc:{cn:'愤怒值达到50',en:'Reach 50 Anger'}},
+  {id:'funds_0',icon:'💸',name:{cn:'一穷二白',en:'Broke'},desc:{cn:'资金归零',en:'Hit zero funds'}},
+  {id:'all_extreme',icon:'🔥',name:{cn:'极端主义者',en:'Extremist'},desc:{cn:'一局内选择5次B/C选项',en:'Pick 5 extreme choices in one game'}},
+  {id:'all_normal',icon:'😇',name:{cn:'良心老板',en:'Saint Boss'},desc:{cn:'一局内选择5次A选项',en:'Pick 5 normal choices in one game'}},
+  {id:'staff_quit',icon:'🚪',name:{cn:'人才流失',en:'Brain Drain'},desc:{cn:'有员工辞职',en:'Have a staff member quit'}},
+  {id:'staff_rebel',icon:'✊',name:{cn:'造反有理',en:'Rebellion'},desc:{cn:'有员工造反',en:'Have a staff member rebel'}},
+  {id:'victory',icon:'🏆',name:{cn:'人生赢家',en:'Winner'},desc:{cn:'成功上市',en:'Complete IPO'}},
+  {id:'bankrupt',icon:'📉',name:{cn:'破产清算',en:'Bankrupt'},desc:{cn:'公司破产',en:'Go bankrupt'}},
+  {id:'revolt',icon:'🔥',name:{cn:'众叛亲离',en:'Betrayed'},desc:{cn:'员工起义',en:'Staff revolt'}},
+  {id:'insane',icon:'🌀',name:{cn:'精神病人',en:'Insane'},desc:{cn:'精神失常',en:'Lose your mind'}},
+  {id:'chain_3',icon:'⚡',name:{cn:'三连击',en:'Triple Strike'},desc:{cn:'连续3次选择极端选项',en:'3 extreme choices in a row'}},
+  {id:'chain_5',icon:'💀',name:{cn:'五连绝世',en:'Pentakill'},desc:{cn:'连续5次选择极端选项',en:'5 extreme choices in a row'}},
+  {id:'survivor',icon:'🎯',name:{cn:'幸存者',en:'Survivor'},desc:{cn:'存活15轮以上',en:'Survive 15 rounds'}},
+  {id:'marathon',icon:'🏃',name:{cn:'马拉松',en:'Marathon'},desc:{cn:'存活25轮以上',en:'Survive 25 rounds'}},
+  {id:'rich',icon:'💎',name:{cn:'富可敌国',en:'Filthy Rich'},desc:{cn:'资金达到150',en:'Reach 150 funds'}},
+  {id:'cult',icon:'🙏',name:{cn:'邪教领袖',en:'Cult Leader'},desc:{cn:'一局内疯狂值达到80且未疯',en:'Reach 80 madness without going insane'}},
+  {id:'diplomat',icon:'🕊️',name:{cn:'外交家',en:'Diplomat'},desc:{cn:'一局内愤怒值始终低于30',en:'Keep anger below 30 entire game'}},
+  {id:'tyrant',icon:'👑',name:{cn:'暴君',en:'Tyrant'},desc:{cn:'一局内让3名员工辞职',en:'Make 3 staff quit in one game'}},
+  {id:'ng_plus',icon:'🌟',name:{cn:'二周目',en:'New Game+'},desc:{cn:'解锁新游戏+模式',en:'Unlock New Game+'}},
+  {id:'all_achievements',icon:'👑',name:{cn:'全成就',en:'Completionist'},desc:{cn:'解锁所有成就',en:'Unlock all achievements'}},
+  {id:'speedrun',icon:'⏱️',name:{cn:'速通',en:'Speedrun'},desc:{cn:'10轮内通关',en:'Complete in 10 rounds'}},
+  {id:'pacifist',icon:'🕊️',name:{cn:'和平主义者',en:'Pacifist'},desc:{cn:'不选任何极端选项通关',en:'Complete without extreme choices'}},
+  {id:'chaos',icon:'🌪️',name:{cn:'混沌使者',en:'Chaos Bringer'},desc:{cn:'所有员工都造反或辞职',en:'All staff quit or rebel'}}
+];
+
+/* ============ EVENTS (50+) ============ */
+const EVENTS_BASE=[
+// === ORIGINAL 20 EVENTS (slightly enhanced) ===
+{id:1,tag:{cn:'🕘 周一早会',en:'🕘 Monday Morning'},title:{cn:'周一早晨の突袭',en:'The Monday Morning Ambush'},bg:{cn:'周一早上8:55，全体员工刚打完卡，正在工位上啃包子喝豆浆。你突然在工作群发了条消息：「9点整大会议室，全员大会，不许请假不许迟到，没吃完的把包子带进来。」办公室里传来一片哀嚎。王工手里的肉包子差点掉地上。',en:'Monday, 8:55 AM. Employees just clocked in, still nursing their coffees and breakfast wraps. Suddenly, your message hits the team chat: "All-hands in the main conference room at 9:00 sharp. No excuses. No delays. Bring your breakfast — you can eat while I talk." A wave of groans ripples across the floor. Dave nearly drops his burrito.'},opts:[{text:{cn:'「会议控制在15分钟，每个人站着说一句本周重点就行」',en:'"Keep it to 15 minutes. Everyone shares one priority for the week. Standing only."'},letter:'A',funds:-5,anger:-5,madness:0,hint:'💰-5 😡-5',extreme:false},{text:{cn:'「每人准备5分钟PPT汇报本周计划，我最后总结2小时，顺便讲讲我当年的创业故事」',en:'"Each of you, prepare a 5-minute deck on your weekly plan. I\'ll wrap up with a 2-hour keynote — including my startup war stories."'},letter:'B',funds:0,anger:+20,madness:+15,hint:'😡+20 🤪+15',extreme:true},{text:{cn:'「今天的会不开了——改成每人写3000字周报，下午5点前交，不准复制粘贴」',en:'"Meeting\'s canceled. Instead, everyone submit a 3,000-word weekly report by 5 PM. No copy-pasting. I will check."'},letter:'C',funds:-5,anger:+15,madness:+10,hint:'💰-5 😡+15 🤪+10',extreme:true}]},
+{id:2,tag:{cn:'🌙 深夜夺命',en:'🌙 Late Night'},title:{cn:'周五晚上的「小改动」',en:'The Friday Night "Quick Fix"'},bg:{cn:'周五晚上11:30，你躺在沙发上刷短视频。突然工作群里弹出产品经理的消息：「老板说这个地方能不能加个小功能？很简单的，就改一下颜色，顺便改一下交互逻辑、数据结构、和整个支付流程……今晚能上线吗？」群里死一般寂静，只有几个「对方正在输入...」反复闪烁。',en:'Friday, 11:30 PM. You\'re on the couch scrolling TikTok. Then the product manager drops this in the team Slack: "Boss wants a tiny feature added. Super simple — just tweak the color scheme, rework the interaction logic, refactor the data layer, and rebuild the entire payment flow. Can we ship tonight?" Dead silence. Three "typing..." indicators flicker on and off. Nobody sends anything.'},opts:[{text:{cn:'「下周一再说，今天是周五，大家先好好休息」',en:'"Let\'s pick this up Monday. It\'s Friday night — go enjoy your weekend."'},letter:'A',funds:-5,anger:-10,madness:0,hint:'💰-5 😡-10',extreme:false},{text:{cn:'「全体@所有人，现在立刻上线改！我在线等，改完@我验收」',en:'"@channel Everyone get online NOW. I\'m waiting. Ping me when it\'s done and I\'ll review it live."'},letter:'B',funds:+10,anger:+25,madness:+15,hint:'💰+10 😡+25 🤪+15',extreme:true},{text:{cn:'「回复：可以加。顺便把整个App的UI也重新设计一下，反正你们周末也没事做对吧」',en:'"Reply: approved. While you\'re at it, redesign the entire app UI too. I mean, it\'s not like you had weekend plans, right?"'},letter:'C',funds:0,anger:+30,madness:+20,hint:'😡+30 🤪+20',extreme:true}]},
+{id:3,tag:{cn:'🚽 经济学',en:'🚽 Economics'},title:{cn:'带薪拉屎の天花板',en:'The Economics of Paid Pooping'},bg:{cn:'HR提交了一份触目惊心的数据分析：「老板，公司厕所平均每人每天占用47分钟，折算年度『带薪拉屎』成本高达180万元。」HR还附带了一个方案：在厕所安装计时器，超过10分钟自动给HR发警报，并推送《高效工作》冥想音频到隔间音响。',en:'HR drops a bombshell report on your desk: "Boss, employees spend an average of 47 minutes per day in the bathroom. Annual cost of paid toilet time: $270,000." They\'ve attached a proposal: install stall timers that auto-alert HR after 10 minutes and pipe a "Productivity Meditation" audio track into each stall.'},opts:[{text:{cn:'「不管，生理需求是人的基本权利，我不抠这点」',en:'"Leave it alone. Bathroom breaks are a basic human right. I\'m not that cheap."'},letter:'A',funds:-10,anger:-5,madness:0,hint:'💰-10 😡-5',extreme:false},{text:{cn:'「批准计时方案！顺便把厕所WiFi关了，抽水马桶改成扫码付费，1块钱冲一次」',en:'"Approved! Also: kill the bathroom WiFi, and install pay-to-flush — $0.50 per flush via QR code."'},letter:'B',funds:+15,anger:+25,madness:+15,hint:'💰+15 😡+25 🤪+15',extreme:true},{text:{cn:'「把厕所改造成『站立办公区』，每个隔间放一台笔记本电脑，拉屎也不耽误写代码」',en:'"Convert the bathrooms into standing desk pods. Laptop in every stall. No excuse to stop coding."'},letter:'C',funds:-15,anger:+20,madness:+20,hint:'💰-15 😡+20 🤪+20',extreme:true}]},
+{id:4,tag:{cn:'🏕️ 团建',en:'🏕️ Team Building'},title:{cn:'团建or加班，这是个问题',en:'Team Building or Team Breaking?'},bg:{cn:'团建方案出来了：本周末去郊区「狼性军事化拓展基地」，项目包括凌晨5点拉练5公里、泥潭匍匐前进50米、以及「感恩老板」主题演讲（要求脱稿，时长不少于8分钟）。费用员工AA制，报名截止今晚，不参加的扣本月绩效。',en:'The team-building proposal has landed: this weekend at the "Wolf Spirit Military Boot Camp." Activities include a 5 AM 3-mile run, 50 yards of mud crawling, and a mandatory 8-minute "Why I\'m Grateful for My Boss" speech (memorized, no notes). Costs are split among employees. Non-attendees lose their quarterly bonus.'},opts:[{text:{cn:'「方案毙了，改温泉度假村，公司全包，纯放松不搞事」',en:'"Scrap it. Book a hot springs resort instead. Company pays. Pure relaxation, zero team-building nonsense."'},letter:'A',funds:-20,anger:-15,madness:0,hint:'💰-20 😡-15',extreme:false},{text:{cn:'「批准军事化方案！不参加的直接在绩效系统里标记『缺乏团队精神』」',en:'"Approved! Anyone who skips gets flagged as "Lacks Team Spirit" in their permanent HR file."'},letter:'B',funds:+10,anger:+30,madness:+20,hint:'💰+10 😡+30 🤪+20',extreme:true},{text:{cn:'「团建取消！周末全员加班赶项目，公司管两顿盒饭，荤素搭配」',en:'"Team building is CANCELLED. Everyone works the weekend instead. Company provides two boxed meals. Meat AND veggies."'},letter:'C',funds:-5,anger:+25,madness:+15,hint:'💰-5 😡+25 🤪+15',extreme:true}]},
+{id:5,tag:{cn:'📝 述职',en:'📝 Review'},title:{cn:'述职报告的尽头',en:'The Performance Review Gauntlet'},bg:{cn:'又到了半年述职季。你签发了一份通知：每人提交不少于5000字的述职报告，包含SWOT分析、OKR复盘、360度自评、以及「你如何理解公司核心价值观之——奋斗者为本」。提交截止时间是明天上午9点整，格式要求：宋体四号，行距1.5倍，不允许出现任何错别字。',en:'Mid-year review season. You issue a company-wide memo: all employees must submit a 5,000+ word self-assessment including SWOT analysis, OKR retrospective, 360-degree feedback, and an essay on "What Our Core Value of \'Hustle Culture\' Means to Me." Deadline: tomorrow at 9 AM. Formatting: 12pt Times New Roman, 1.5 line spacing. Zero typos tolerated.'},opts:[{text:{cn:'「改成1000字，给一周时间，不用搞形式主义」',en:'"Make it 1,000 words, give them a week. No need for bureaucratic nonsense."'},letter:'A',funds:0,anger:-10,madness:0,hint:'😡-10',extreme:false},{text:{cn:'「加码：不许用电脑写，必须手写，而且要用毛笔正楷抄在宣纸上装订成册」',en:'"Addendum: no computers allowed. Handwritten only. With a calligraphy brush. On rice paper. Bound into a booklet."'},letter:'B',funds:0,anger:+25,madness:+20,hint:'😡+25 🤪+20',extreme:true},{text:{cn:'「述职取消，改为明天下午现场即兴演讲，抽题目，全程直播，弹幕打分」',en:'"Reviews are canceled. Instead: live, on-stage, impromptu presentations tomorrow. Topics drawn from a hat. Livestreamed. Audience voting."'},letter:'C',funds:0,anger:+20,madness:+15,hint:'😡+20 🤪+15',extreme:true}]},
+{id:6,tag:{cn:'🧧 年终奖',en:'🧧 Bonus'},title:{cn:'年终奖の行为艺术',en:'The Year-End Bonus Performance Art'},bg:{cn:'年终奖发放前夜，你把几个骨干依次叫进办公室：「小王啊，今年公司不容易，你也看到了。但你的付出，我作为老板都记在心里……明年，明年肯定会好起来的！到时候——」话说到一半，你意味深长地停止了。办公室里弥漫着一种禅意的寂静。',en:'The night before bonuses are announced, you summon your top performers one by one: "Sarah, I know it\'s been a tough year. But I see your effort. I really do. Next year... next year things will be different! When the time comes—" You pause meaningfully. A zen-like silence fills the room. Sarah stares at the floor.'},opts:[{text:{cn:'「每人发一个月工资作为年终奖，不画饼，实实在在的」',en:'"Give everyone a full month\'s salary as bonus. No empty promises. Real money."'},letter:'A',funds:-30,anger:-20,madness:0,hint:'💰-30 😡-20',extreme:false},{text:{cn:'「每人发一本精装版《狼性精神》，我在扉页签了名，全球限量100本」',en:'"Give everyone a leather-bound copy of \'Wolf Spirit.\' I signed the inside cover. Limited edition. Only 100 copies exist."'},letter:'B',funds:+30,anger:+30,madness:+15,hint:'💰+30 😡+30 🤪+15',extreme:true},{text:{cn:'「宣布年终奖改为『奋斗期权』——公司食堂午餐代金券，每人3张，有效期至本月底」',en:'"Announce the bonus has been restructured into \'Hustle Options\' — cafeteria lunch vouchers. Three per person. Expires this month."'},letter:'C',funds:+20,anger:+35,madness:+20,hint:'💰+20 😡+35 🤪+20',extreme:true}]},
+{id:7,tag:{cn:'📅 调休学',en:'📅 Time Off'},title:{cn:'调休永动机',en:'The Comp Time Perpetual Motion Machine'},bg:{cn:'国庆7天长假前，你在全员群里发了条措辞温暖的通知：「为确保Q4项目按期交付，国庆期间全员『自愿』加班7天，节后给予双倍调休天数。」——但你知道，公司的调休规则是：调休需要提前一个月申请，每次不超过半天，且所有调休天数于每年12月31日23:59:59自动清零。',en:'Before the week-long holiday break, you send a warmly-worded memo: "To meet Q4 milestones, all employees will \'voluntarily\' work through the holiday. You\'ll receive double compensatory time off afterward." — But you also know the fine print: comp time requires 30 days advance notice, max half-day increments, and all unused days expire on Dec 31 at 11:59:59 PM.'},opts:[{text:{cn:'「正常放假，项目进度我来想办法协调，该休息就休息」',en:'"Normal holiday. I\'ll figure out the project timeline. Everyone deserves the break."'},letter:'A',funds:-10,anger:-15,madness:0,hint:'💰-10 😡-15',extreme:false},{text:{cn:'「加班！调休有效期缩短为24小时，过期自动作废，不可转让不可继承」',en:'"Work through the holiday! Comp time now expires in 24 hours. Use it or lose it. Non-transferable."'},letter:'B',funds:+25,anger:+30,madness:+20,hint:'💰+25 😡+30 🤪+20',extreme:true},{text:{cn:'「取消国庆假！我发全员信：『公司就是你的家，在家还放什么假？地球不爆炸，我们不放假』」',en:'"Cancel all holidays. Company-wide email: \'The office IS your home. Why would you need a vacation from home?\'"'},letter:'C',funds:+15,anger:+35,madness:+25,hint:'💰+15 😡+35 🤪+25',extreme:true}]},
+{id:8,tag:{cn:'🎭 甩锅学',en:'🎭 Blame'},title:{cn:'甩锅の艺术展',en:'The Fine Art of Blame-Shifting'},bg:{cn:'刚上线的新功能出了个严重Bug——用户支付成功但订单状态全部显示「正在审核您的心情」。技术总监说这是产品需求没写清楚，产品经理说是UI交互设计误导了开发，UI说是开发自己没看清标注。三个人在你面前互相指了一个小时，你需要找一个人来承担全部责任。',en:'A freshly-deployed feature has a catastrophic bug: payments succeed, but every order status reads "Currently reviewing your life choices." Engineering blames Product for vague specs. Product blames Design for misleading mockups. Design blames Engineering for ignoring the annotations. They\'ve been pointing fingers at each other in your office for an hour. You need a scapegoat.'},opts:[{text:{cn:'「所有人一起复盘，不追责不扣钱，先把问题修复了再说」',en:'"Everyone does a blameless postmortem. No punishments. Just fix the issue first."'},letter:'A',funds:-10,anger:-5,madness:0,hint:'💰-10 😡-5',extreme:false},{text:{cn:'「让入职不到三个月还在试用期的实习生背全锅，当场解除劳动合同」',en:'"Blame the intern. The one who\'s been here three months. Terminate them immediately."'},letter:'B',funds:+5,anger:+30,madness:+20,hint:'💰+5 😡+30 🤪+20',extreme:true},{text:{cn:'「发全员邮件：『这是全体员工的集体失败，本月所有人绩效系数一律归零』」',en:'"Send a company-wide email: \'This is a collective failure. Everyone\'s performance multiplier is reset to zero this month.\'"'},letter:'C',funds:+10,anger:+35,madness:+25,hint:'💰+10 😡+35 🤪+25',extreme:true}]},
+{id:9,tag:{cn:'🌡️ 空调战',en:'🌡️ Thermostat'},title:{cn:'空调温度の世界大战',en:'Thermostat World War III'},bg:{cn:'夏天到了，办公室空调引发了全面内战。女同事们说太冷要调到26度，男同事们说太热要16度。双方在工作群里吵了200多条消息，越吵越专业——有人打印了《室内空调温度对人体工效影响的元分析》PDF扔在群里，还有人做了柱状图。空调遥控器在行政前台手里，前台已经不敢上班了。',en:'Summer hits and the office thermostat becomes a battlefield. Half the floor is freezing, demanding 78°F. The other half is sweating, demanding 60°F. The Slack thread has 200+ messages. Someone shared a peer-reviewed paper on thermal comfort. Someone made an infographic with bar charts. The remote is with the receptionist, who hasn\'t shown up in two days.'},opts:[{text:{cn:'「分区调节，不同区域各自投票决定温度，公平公开」',en:'"Zone-based climate control. Each area votes on their temperature. Democratic. Fair."'},letter:'A',funds:-5,anger:-5,madness:0,hint:'💰-5 😡-5',extreme:false},{text:{cn:'「把遥控器锁进我的保险柜，温度定为我个人最舒适的20.5度，任何人不得调整」',en:'"I\'m locking the remote in my safe. Temperature is set to MY personal comfort level. Non-negotiable."'},letter:'B',funds:0,anger:+20,madness:+10,hint:'😡+20 🤪+10',extreme:true},{text:{cn:'「把中央空调关了，每人发一把蒲扇，扇面上印公司logo和slogan：『心静自然凉·奋斗最光荣』」',en:'"Kill the AC entirely. Issue everyone a hand fan printed with our company logo and motto: \'Stay Cool. Work Harder.\'"'},letter:'C',funds:+5,anger:+25,madness:+15,hint:'💰+5 😡+25 🤪+15',extreme:true}]},
+{id:10,tag:{cn:'💼 HR关怀',en:'💼 HR Policy'},title:{cn:'HRの温柔一刀',en:'HR\'s Gentle Guillotine'},bg:{cn:'HR满面笑容地推门进来：「老板！为了提高员工幸福感和工作效率，我设计了一套『弹性工作制2.0』——上班时间弹性到早上7:00，下班时间弹性到晚上23:00，中间这16个小时都属于弹性区间，员工可以根据工作需要在弹性区间内自由……选择加班到几点。怎么样，这个方案听起来是不是很有温度？」',en:'HR walks in beaming: "Boss! To boost employee happiness and efficiency, I\'ve designed Flexible Work 2.0! Core hours are now… well, flexible — from 7 AM to 11 PM. That\'s a full 16-hour flexible window where employees are free to… choose which hours to work overtime! Doesn\'t this sound employee-friendly?"'},opts:[{text:{cn:'「拒绝，维持朝九晚六的正常工作时间，别搞这些文字游戏」',en:'"Rejected. We keep 9 to 6. No word games disguised as flexibility."'},letter:'A',funds:0,anger:0,madness:0,hint:'😐 Nothing changes',extreme:false},{text:{cn:'「批准！再加一条：弹性期间必须随叫随到，钉钉消息超5分钟未回复算迟到，扣半天工资」',en:'"Approved! Add this: must respond to any work message within 5 minutes during flex hours. Missing it counts as tardiness. Half-day pay docked."'},letter:'B',funds:+15,anger:+25,madness:+15,hint:'💰+15 😡+25 🤪+15',extreme:true},{text:{cn:'「把HR的方案打印裱起来挂在公司入口，下面手写一行字：『996是福报2.0·感恩版』」',en:'"Frame HR\'s proposal and hang it in the lobby. Add a handwritten note below: \'996 Is a Blessing™ — Premium Edition.\'"'},letter:'C',funds:0,anger:+30,madness:+20,hint:'😡+30 🤪+20',extreme:true}]}
+];
+const EVENTS_11_30=[
+{id:11,tag:{cn:'💸 发薪日',en:'💸 Payday'},title:{cn:'工资去哪了',en:'Where Is My Paycheck?'},bg:{cn:'今天是发薪日。但到了下午6点，工资卡没有任何动静。财务在全员群里发了段措辞讲究的话：「因银行跨行结算系统升级维护，本月工资发放将延迟3-5个工作日，给您带来不便敬请谅解。另：公司账户资金充裕，请勿传播不实信息。」群里安静了3秒，然后消息量直接炸了。',en:'It\'s payday. By 6 PM, nobody\'s bank account has moved. Finance sends a carefully-worded message: "Due to scheduled banking system maintenance, salary disbursement will be delayed 3-5 business days. We appreciate your patience. P.S. Company accounts are fully funded. Please do not spread rumors." The group chat goes silent for three seconds. Then it explodes.'},opts:[{text:{cn:'「催财务立即处理，每人额外发200块延迟补偿红包」',en:'"Push Finance to process immediately. Send everyone a $30 inconvenience bonus for the trouble."'},letter:'A',funds:-10,anger:-10,madness:0,hint:'💰-10 😡-10',extreme:false},{text:{cn:'「在群里亲自回复：『急什么？我当年创业的时候大半年没拿过工资，现在的年轻人就是吃不了苦』」',en:'"Reply personally in the chat: \'Relax. When I started out I went months without pay. Kids these days are so soft.\'"'},letter:'B',funds:+10,anger:+25,madness:+10,hint:'💰+10 😡+25 🤪+10',extreme:true},{text:{cn:'「宣布本月工资改用公司内部虚拟货币『奋斗币』发放，奋斗币可在公司小卖部1:0.3兑换」',en:'"Announce this month\'s salary will be paid in company scrip: \'HustleCoin.\' Redeemable at the company store. Exchange rate: 30 cents on the dollar."'},letter:'C',funds:+20,anger:+30,madness:+25,hint:'💰+20 😡+30 🤪+25',extreme:true}]},
+{id:12,tag:{cn:'📱 钉钉',en:'📱 Slack'},title:{cn:'钉钉の绝对统治',en:'The Tyranny of Read Receipts'},bg:{cn:'最近你发现一个危险的趋势：下班后你在钉钉发的消息，员工们看完不回的概率从17%飙升到了63%。更让你不舒服的是——有人昨晚22:03看了你的「这个方案今晚想想」消息，但直到今天早上8:47才回复了个「好的老板🙏」。这中间的10小时44分钟，ta在想什么？',en:'You\'ve noticed a disturbing trend: the rate at which employees read your after-hours messages without replying has jumped from 17% to 63%. What bothers you more — one person read your "think about this tonight" message at 10:03 PM, but didn\'t reply "Got it boss 🙏" until 8:47 AM the next day. Ten hours and forty-four minutes. What were they doing? What were they thinking?'},opts:[{text:{cn:'「下班时间不强制回复，制定明确的非工作时间沟通规则」',en:'"No mandatory after-hours replies. Establish clear boundaries for off-hours communication."'},letter:'A',funds:0,anger:-10,madness:0,hint:'😡-10',extreme:false},{text:{cn:'「启用钉钉GPS打卡+人脸识别考勤，每天打卡4次（到岗/午休/午休结束/下班），漏一次扣200」',en:'"Enable GPS check-in with facial recognition. Four daily check-ins: arrival, lunch-start, lunch-end, departure. Miss one and you lose $30."'},letter:'B',funds:+10,anger:+25,madness:+15,hint:'💰+10 😡+25 🤪+15',extreme:true},{text:{cn:'「让开发做一个老板专用插件：消息已读30秒内未回复，自动在全员群公告，附上已读截图」',en:'"Have Engineering build a CEO plugin: if a message stays on \'read\' for 30 seconds without reply, auto-post a screenshot in the general channel."'},letter:'C',funds:-5,anger:+30,madness:+20,hint:'💰-5 😡+30 🤪+20',extreme:true}]},
+{id:13,tag:{cn:'🚨 离职潮',en:'🚨 Exodus'},title:{cn:'核心团队の集体出走',en:'Mass Resignation of the A-Team'},bg:{cn:'一个平静的周二下午，你的技术总监、首席架构师、以及唯一能搞定前端兼容上古IE内核的大神——三个人同时提交了离职申请书。更要命的是：他们三个维护着公司100%的核心代码，文档数量为零，注释风格统一为「// 这个别动，动了会炸，我也不知道为什么」。',en:'A quiet Tuesday afternoon. Your CTO, lead architect, and the one developer who somehow keeps the legacy IE11 frontend alive — all three submit their resignations. Simultaneously. Worse: they collectively maintain 100% of your core codebase. Documentation: zero. Code comments, when they exist: "// don\'t touch this, it works, I don\'t know why, just don\'t."'},opts:[{text:{cn:'「逐一约谈，合理涨薪+真实股权激励，诚恳挽留」',en:'"One-on-one meetings. Real raises. Real equity. Genuinely try to keep them."'},letter:'A',funds:-25,anger:-10,madness:0,hint:'💰-25 😡-10',extreme:false},{text:{cn:'「全部驳回！立刻法务启动竞业协议诉讼，同时把Git仓库设为只读模式」',en:'"Reject all of them! Legal activates non-compete lawsuits immediately. Git repos: set to read-only."'},letter:'B',funds:-20,anger:+35,madness:+25,hint:'💰-20 😡+35 🤪+25',extreme:true},{text:{cn:'「批准离职，但在离职证明上手写备注：『该员工拒绝996且不认同公司文化，建议慎重录用』」',en:'"Approve the resignations, but add a handwritten note to their exit letters: \'Refused to embrace hustle culture. Hire at your own risk.\'"'},letter:'C',funds:0,anger:+30,madness:+20,hint:'😡+30 🤪+20',extreme:true}]},
+{id:14,tag:{cn:'💻 技术债',en:'💻 Tech Debt'},title:{cn:'CTOの技术浪漫主义',en:'The CTO\'s Technical Romanticism'},bg:{cn:'CTO两眼放光地冲进你办公室：「老板！我有一个天才的技术方案！把整个系统用Rust语言重构，性能理论上可以提升2000%，内存安全100%！」你说：「好，但公司没有人会Rust。」CTO沉默了两秒：「……没有人可以学嘛！」你说：「但线上跑着每天几百万交易。」CTO又沉默了两秒：「Rust不会崩的。」',en:'Your CTO bursts in, eyes wild with excitement: "Boss! I have a genius plan! Let\'s rewrite the ENTIRE system in Rust. Theoretical performance gain: 2,000%. Memory safety: 100%!" You say: "Great. Nobody here knows Rust." CTO pauses. "…They can learn!" You say: "We process millions of transactions a day." CTO pauses again. "Rust doesn\'t crash."'},opts:[{text:{cn:'「先让CTO招到会Rust的人，做完技术预研和技术方案评审再说」',en:'"Have the CTO hire Rust developers first. Technical feasibility study before any approval."'},letter:'A',funds:-10,anger:0,madness:0,hint:'💰-10',extreme:false},{text:{cn:'「批准！今晚停服开始重构，工期？CTO说他一个人周末就能写完MVP，我信了」',en:'"Approved! Begin migration tonight. Timeline? CTO says he can ship an MVP by Monday. I believe him."'},letter:'B',funds:-20,anger:+20,madness:+15,hint:'💰-20 😡+20 🤪+15',extreme:true},{text:{cn:'「要求三周内用Rust完全重写上线，且在重写期间现有Java系统继续迭代两个大版本」',en:'"Full Rust rewrite: three-week deadline. Meanwhile, the existing Java system ships two major releases in parallel."'},letter:'C',funds:-10,anger:+25,madness:+20,hint:'💰-10 😡+25 🤪+20',extreme:true}]},
+{id:15,tag:{cn:'🦈 投资人',en:'🦈 Investors'},title:{cn:'投资人の突然造访',en:'Surprise Investor Visit'},bg:{cn:'下午1点32分，你的手机响了：「X总，我和LP刚好在附近，两点到你公司坐坐，不用准备什么。」你挂了电话环顾四周——三个员工趴在桌上睡午觉，两个在联机打王者荣耀，前台在刷小红书，茶水间零食柜已被洗劫一空。你还有……28分钟。',en:'1:32 PM. Your phone buzzes: "Hey, my LP and I are in the neighborhood. We\'ll swing by at 2 PM. Don\'t prepare anything special!" You hang up and scan the office — three employees face-down napping at their desks, two in a heated League of Legends match, reception scrolling Instagram, the snack cabinet completely ransacked. You have… 28 minutes.'},opts:[{text:{cn:'「诚实面对，简单整理办公环境+准备10页真实数据PPT，让大家正常状态配合」',en:'"Be honest. Quick tidy-up, prep a 10-slide deck with real metrics. Everyone just act natural."'},letter:'A',funds:-5,anger:+5,madness:0,hint:'💰-5 😡+5',extreme:false},{text:{cn:'「紧急清场：所有人带上电脑去消防通道办公，办公室只留你、HR和CTO扮演精英团队」',en:'"Emergency evac! Everyone grab laptops and work from the fire exit stairwell. Office stays empty except for me, HR, and CTO — pretending to be the whole company."'},letter:'B',funds:0,anger:+25,madness:+15,hint:'😡+25 🤪+15',extreme:true},{text:{cn:'「让全体员工换上公司文化衫，用20分钟紧急排练一首《感恩的心》手语舞欢迎投资人」',en:'"Everyone changes into company-branded hoodies. We\'ve got 20 minutes to choreograph a welcome flash mob for the investors."'},letter:'C',funds:-5,anger:+20,madness:+15,hint:'💰-5 😡+20 🤪+15',extreme:true}]},
+{id:16,tag:{cn:'💥 宕机',en:'💥 Outage'},title:{cn:'周五黄昏の生产故障',en:'Friday 5:59 PM — Production Is Down'},bg:{cn:'周五下午5:59，距离下班打卡还有1分钟。屏幕上弹出一条监控告警——生产环境全面崩了。所有用户看到的页面是一行冰冷的白底黑字：「TypeError: Cannot read properties of undefined (reading \'life\')」。运维说是数据库出了问题，DBA说是代码的空指针没处理，开发说是运维上周升级了中间件。',en:'Friday, 5:59 PM. One minute until the weekend. A monitoring alert screams across every screen — production is completely dead. Every user sees the same cold message on a white screen: "TypeError: Cannot read properties of undefined (reading \'life\')." DevOps blames the database. The DBA blames a null pointer in the code. Developers blame the middleware upgrade Ops did last week.'},opts:[{text:{cn:'「成立紧急应急小组，所有加班的人三倍加班费+夜宵打车报销，先修bug不追责」',en:'"Form a strike team. Triple overtime pay + dinner + rideshare covered. Fix the bug. No blame right now."'},letter:'A',funds:-15,anger:-5,madness:0,hint:'💰-15 😡-5',extreme:false},{text:{cn:'「在全员群里宣布：『谁今晚把bug修好，奖励——明天可以继续来上班！』」',en:'"Post in the general channel: \'Whoever fixes this tonight gets a special reward — they get to keep their job tomorrow!\'"'},letter:'B',funds:0,anger:+25,madness:+15,hint:'😡+25 🤪+15',extreme:true},{text:{cn:'「把宕机包装成『限时用户增长实验』，给所有人发Push：『系统正在激情升级中，邀请好友解锁更多功能！』」',en:'"Spin the outage as a \'limited-time growth experiment.\' Push notification: \'We\'re leveling up! Invite friends to unlock new features!\'"'},letter:'C',funds:+5,anger:+20,madness:+15,hint:'💰+5 😡+20 🤪+15',extreme:true}]},
+{id:17,tag:{cn:'🕵️ 挖角',en:'🕵️ Poaching'},title:{cn:'竞品の钞能力',en:'The Competitor\'s Money Cannon'},bg:{cn:'一个残酷的消息传来了：隔壁竞品公司正在疯狂挖你的墙角。他们开出的条件是——双倍薪资+永久远程办公+不加班+免费午餐+下午茶+撸猫室+每季度一次海外旅修。你的五个核心员工已经有四个收到了offer邮件，唯一没收到的那个正在怀疑自己的人生价值。',en:'Bad news: the competitor across the street is poaching your team with an obscene offer — double salary, permanent remote, zero overtime, free meals, snack bar, a cat lounge, plus quarterly international retreats. Four of your five key engineers already have offer letters. The fifth is spiraling, questioning their entire self-worth.'},opts:[{text:{cn:'「针对性给核心员工涨薪+增加真实福利，竞品怎么打我怎么接」',en:'"Match and exceed. Real raises for key people. Real perks. Fight fire with fire."'},letter:'A',funds:-20,anger:-10,madness:0,hint:'💰-20 😡-10',extreme:false},{text:{cn:'「召开全员誓师大会：『竞品的钱都是烧投资人的，花完就倒闭！我们是百年老店，要相信情怀的力量！』」',en:'"Hold an all-hands rally: \'Their money is just VC cash! It\'ll run out! We\'re building a legacy! Believe in the mission!\'"'},letter:'B',funds:0,anger:+20,madness:+10,hint:'😡+20 🤪+10',extreme:true},{text:{cn:'「和竞品CEO约在产业园门口真人快打，谁赢了谁获得该园区永久挖人豁免权」',en:'"Challenge the competitor\'s CEO to a fistfight in the parking lot. Winner gets permanent anti-poaching rights in this zip code."'},letter:'C',funds:0,anger:+15,madness:+20,hint:'😡+15 🤪+20',extreme:true}]},
+{id:18,tag:{cn:'🎤 年会',en:'🎤 Party'},title:{cn:'年会节目の终极审判',en:'The Mandatory Talent Show'},bg:{cn:'年会节目征集通知下来了：每个部门必须出一个「充分展现公司核心价值观」的节目，时长不少于8分钟。行政部报了诗朗诵《致最敬爱的老板》，销售部报了原创小品《加班使我快乐·二则》，技术和产品联合报了先锋话剧《空椅子》——据说是一把空椅子和程序员的灵魂对话。',en:'The annual party performance signup is out: every department must deliver an 8-minute act "embodying our core values." Admin signed up for spoken word poetry: "Ode to Our Beloved CEO." Sales is workshopping an original skit: "Overtime Makes Me Happy, Vol. 2." Engineering and Product are co-producing an avant-garde piece called "The Empty Chair" — an existential dialogue between a developer and… a chair.'},opts:[{text:{cn:'「强制表演取消，年会改成抽奖+吃火锅+真心话大冒险，我买单」',en:'"Cancel mandatory performances. Annual party is now: raffle prizes, hot pot, and truth-or-dare. My treat."'},letter:'A',funds:-15,anger:-15,madness:0,hint:'💰-15 😡-15',extreme:false},{text:{cn:'「批准全部！一等奖奖品为『与老板单独共进午餐一次』，末位淘汰部门全员扣发年终奖」',en:'"All acts approved! Grand prize: a private lunch with me. Worst department loses their entire bonus."'},letter:'B',funds:+10,anger:+30,madness:+20,hint:'💰+10 😡+30 🤪+20',extreme:true},{text:{cn:'「你亲自上台表演原创rap《老板不坏员工不爱》，强制全场跟唱副歌并拍视频发社交媒体打卡」',en:'"You perform an original rap: \'Tough Boss, Tough Love.\' Mandatory crowd sing-along. Post to social media with company hashtags."'},letter:'C',funds:0,anger:+25,madness:+20,hint:'😡+25 🤪+20',extreme:true}]},
+{id:19,tag:{cn:'📊 OKR',en:'📊 OKRs'},title:{cn:'OKRの废话文学大赛',en:'The OKR Buzzword Olympics'},bg:{cn:'季度OKR评审会上，你翻看了所有人的OKR表格。你发现90%的内容充斥着「优化了」「提升了」「推进了」这种完全不可量化的高级废话。唯一一个有具体数字的OKR写的是「体重优化5%（当前82.3kg）」——这是产品经理的Q3个人目标。你陷入了深深的沉思。',en:'Quarterly OKR review. You flip through everyone\'s submissions. 90% of entries are filled with "optimized," "enhanced," and "accelerated" — buzzwords that mean absolutely nothing. The only OKR with an actual number reads: "Optimize body weight by 5% (current: 181.4 lbs)" — submitted by the product manager as a personal Q3 goal. You stare into the void.'},opts:[{text:{cn:'「组织一次OKR方法培训，要求每个目标至少有一个可量化的关键结果」',en:'"Run an OKR workshop. Every objective must have at least one measurable key result."'},letter:'A',funds:-5,anger:0,madness:0,hint:'💰-5',extreme:false},{text:{cn:'「发布新规：所有人的OKR必须包含至少10个精确到小数点后两位的量化指标，数据来源需注明」',en:'"New policy: every OKR must include at least 10 quantified metrics, each to two decimal places. Cite your data sources."'},letter:'B',funds:0,anger:+20,madness:+10,hint:'😡+20 🤪+10',extreme:true},{text:{cn:'「宣布OKR升级为OFR系统（Objective Fear Result），每个目标绑定惩罚：未达成者下季度每天在公司门口举牌子」',en:'"OKRs are now OFRs — Objective Fear Results. Miss a target? Next quarter you hold a sign outside the building: \'I failed my OKRs.\'"'},letter:'C',funds:0,anger:+30,madness:+25,hint:'😡+30 🤪+25',extreme:true}]},
+{id:20,tag:{cn:'📋 需求海',en:'📋 Spec Hell'},title:{cn:'产品经理の终极需求',en:'The Product Manager\'s Magnum Opus'},bg:{cn:'凌晨2:47，产品经理往技术群里扔了一个127MB的PDF文件。文件名是：《V4.7版本需求变更·终稿·最终版·真的最后一次·打死不改版_v2.pdf》。打开一看，从数据库字段名到首页按钮圆角弧度全部改了一遍。PDF最后一页有行8号字体的小字：「以上内容仅代表产品阶段性思考，可能随老板心情随时调整。」',en:'2:47 AM. The product manager drops a 127MB PDF into the engineering channel. File name: "V4.7_Specs_FINAL_v2_REALLY_FINAL_NO_MORE_CHANGES_v3.pdf." Inside: everything has changed. Database schemas. Button radii. The entire navigation flow. At the bottom of page 347, in 6pt font: "These specifications represent the product team\'s current thinking and are subject to change based on leadership sentiment."'},opts:[{text:{cn:'「安排明天白天理性讨论，合理评估工作量后排期，不急的砍掉」',en:'"Schedule a rational discussion for tomorrow. Evaluate effort honestly. Cut what isn\'t urgent."'},letter:'A',funds:-5,anger:0,madness:0,hint:'💰-5',extreme:false},{text:{cn:'「直接将PDF转发技术群，附言：『产品说这些今晚全部要上线，明早9点我亲自验收』」',en:'"Forward the PDF directly to engineering. Note: \'PM says all of this ships tonight. I\'ll personally QA it at 9 AM.\'"'},letter:'B',funds:+15,anger:+30,madness:+20,hint:'💰+15 😡+30 🤪+20',extreme:true},{text:{cn:'「觉得产品经理才华横溢，立刻任命其为联席技术总监，让他亲自带队开发自己的需求」',en:'"The PM is brilliant. Promote them to Co-CTO immediately. Let them personally lead development of their own specs."'},letter:'C',funds:0,anger:+35,madness:+25,hint:'😡+35 🤪+25',extreme:true}]},
+{id:21,tag:{cn:'🍱 食堂',en:'🍱 Cafeteria'},title:{cn:'食堂の黑暗料理',en:'The Cafeteria Mystery Meat'},bg:{cn:'员工们在工作群疯狂吐槽食堂：「今天的『红烧狮子头』吃起来像橡皮球」「『番茄炒蛋』里只有番茄没有蛋」「『紫菜蛋花汤』清澈得能当镜子」。行政部解释说是为了控制成本。你看着群里99+条消息，陷入了沉思。',en:'Employees are roasting the company cafeteria in the group chat: "Today\'s \'braised meatballs\' taste like rubber balls." "The \'tomato and egg\' has tomatoes but zero eggs." "The \'seaweed soup\' is so clear you can see your reflection." Admin says it\'s cost control. You stare at 99+ messages.'},opts:[{text:{cn:'「增加食堂预算，聘请专业厨师，员工吃得好才能干得好」',en:'"Increase cafeteria budget. Hire a real chef. Well-fed employees work better."'},letter:'A',funds:-15,anger:-15,madness:0,hint:'💰-15 😡-15',extreme:false},{text:{cn:'「取消食堂，改成外卖平台企业版，但每人每天限额15块，超了自己贴」',en:'"Close the cafeteria. Switch to corporate meal delivery. $2 daily cap per person. Anything over is out of pocket."'},letter:'B',funds:+10,anger:+20,madness:+10,hint:'💰+10 😡+20 🤪+10',extreme:true},{text:{cn:'「宣布食堂实行『饥饿游戏』制——每天限量30份，先到先得，培养员工的竞争意识」',en:'"Cafeteria is now Hunger Games style — 30 meals daily. First come first served. Builds competitive spirit."'},letter:'C',funds:+5,anger:+30,madness:+20,hint:'💰+5 😡+30 🤪+20',extreme:true}]},
+{id:22,tag:{cn:'🚗 通勤',en:'🚗 Commute'},title:{cn:'通勤补贴の消失',en:'The Commute Subsidy Vanishes'},bg:{cn:'财务总监递给你一份报告：「老板，我们发现员工每月交通补贴有30%被用于打车去面试其他公司。」同时，有员工在脉脉上爆料：「我司取消交通补贴，改发『奋斗者里程积分』，积分可兑换公司周边（马克杯、文化衫、老板签名照）。」',en:'Finance hands you a report: "Boss, 30% of monthly commute subsidies are being used for rides to job interviews at other companies." Meanwhile, someone leaked on Glassdoor: "They canceled commute subsidies and replaced them with \'Hustler Miles\' — redeemable for company merch: mugs, hoodies, and signed CEO photos."'},opts:[{text:{cn:'「维持现有补贴，但要求提供真实通勤票据，信任员工」',en:'"Keep current subsidies but require real receipts. Trust your people."'},letter:'A',funds:-10,anger:-5,madness:0,hint:'💰-10 😡-5',extreme:false},{text:{cn:'「取消所有补贴，改为『步行上班奖励计划』——每月步行超过20天奖励50块」',en:'"Cancel all subsidies. Introduce the \'Walk to Work Rewards Program\' — walk 20+ days a month, get $7."'},letter:'B',funds:+15,anger:+25,madness:+15,hint:'💰+15 😡+25 🤪+15',extreme:true},{text:{cn:'「安装GPS追踪所有员工的通勤路线，偏离『最优路线』自动扣发当日补贴」',en:'"Install GPS tracking on all employee commutes. Deviations from the \'optimal route\' auto-forfeit that day\'s subsidy."'},letter:'C',funds:+10,anger:+35,madness:+25,hint:'💰+10 😡+35 🤪+25',extreme:true}]},
+{id:23,tag:{cn:'🎓 培训',en:'🎓 Training'},title:{cn:'培训の形式主义',en:'Training Theater'},bg:{cn:'HR安排了一场「高效能人士的七个习惯」培训，强制全员参加，为期两天，地点在郊区度假村。培训讲师是个光头大叔，开场第一句话是：「我这个人比较直接，你们公司的问题我一眼就能看出来。」你坐在第一排，感觉他在看着你。',en:'HR scheduled a mandatory two-day "7 Habits of Highly Effective People" retreat at a suburban resort. The trainer is a bald guy whose opening line is: "I\'m going to be direct — I can diagnose your company\'s problems in one glance." You\'re in the front row. He\'s looking at you.'},opts:[{text:{cn:'「改为线上自愿参加，不占用周末，完成的有小额学习基金」',en:'"Make it online and voluntary. Not on weekends. Small learning stipend for completion."'},letter:'A',funds:-10,anger:-10,madness:0,hint:'💰-10 😡-10',extreme:false},{text:{cn:'「批准！再加一天，改成三天封闭式训练营，期间没收手机，每天写1000字心得」',en:'"Approved! Add a third day. Make it a phone-free intensive boot camp. 1,000-word daily reflection essays."'},letter:'B',funds:-5,anger:+25,madness:+15,hint:'💰-5 😡+25 🤪+15',extreme:true},{text:{cn:'「让讲师现场给每个人『诊断』，被诊断出『缺乏执行力』的员工当场签PIP改进计划」',en:'"Have the trainer \'diagnose\' everyone live. Anyone diagnosed with \'lack of execution\' signs a PIP on the spot."'},letter:'C',funds:0,anger:+30,madness:+20,hint:'😡+30 🤪+20',extreme:true}]},
+{id:24,tag:{cn:'🏥 体检',en:'🏥 Health Check'},title:{cn:'体检报告の惊吓',en:'The Health Check Horror'},bg:{cn:'年度体检结果出来了。HR忧心忡忡地告诉你：「老板，咱们公司80%的员工有颈椎问题，60%有脂肪肝，40%血压偏高，还有3个人的体检报告上写着『建议立即就医』。」你看着这些数据，陷入了沉思。',en:'Annual health check results are in. HR looks worried: "Boss, 80% have cervical spine issues, 60% fatty liver, 40% high blood pressure, and 3 people\'s reports say \'seek immediate medical attention.\'" You stare at the numbers.'},opts:[{text:{cn:'「增加年度体检预算，引入高端体检套餐，增设健身房和心理辅导」',en:'"Increase health check budget. Premium packages. Add gym and counseling."'},letter:'A',funds:-20,anger:-15,madness:0,hint:'💰-20 😡-15',extreme:false},{text:{cn:'「把体检报告和绩效挂钩——BMI超标的扣绩效，颈椎正常的加绩效（说明加班不够）」',en:'"Link health reports to performance. BMI over limit? Deduction. Healthy cervical spine? Bonus — clearly not working hard enough."'},letter:'B',funds:+10,anger:+30,madness:+20,hint:'💰+10 😡+30 🤪+20',extreme:true},{text:{cn:'「取消体检，改为『自我健康申报』——员工自己填表，公司不承担责任」',en:'"Cancel health checks. Switch to \'self-reported wellness declarations.\' Employees fill out forms. Company accepts zero liability."'},letter:'C',funds:+15,anger:+25,madness:+15,hint:'💰+15 😡+25 🤪+15',extreme:true}]},
+{id:25,tag:{cn:'🍼 产假',en:'🍼 Maternity'},title:{cn:'产假の博弈',en:'The Maternity Leave Gambit'},bg:{cn:'你的技术骨干赵后端怀孕了，申请6个月产假。CTO私下跟你说：「她负责的核心模块没人能接手，她一走项目至少要延期半年。」同时，你在行业群里看到有人讨论：「某大厂女员工怀孕后被『优化』，仲裁赢了拿了2N。」',en:'Your backend lead Lisa is pregnant and applying for 6 months maternity leave. The CTO pulls you aside: "She owns the core module. Nobody else can touch it. Project slips 6 months minimum." Meanwhile, in an industry chat you see: "A major tech company \'optimized\' a pregnant employee. She sued and won 2X severance."'},opts:[{text:{cn:'「全额带薪产假，招临时backup，项目延期就延期，人最重要」',en:'"Full paid leave. Hire temp backup. Project slips if it has to. People come first."'},letter:'A',funds:-20,anger:-15,madness:0,hint:'💰-20 😡-15',extreme:false},{text:{cn:'「批准3个月产假，但要求『居家办公』——每天提交工作日报，每周视频汇报」',en:'"Approve 3 months. But require \'remote work\' — daily status reports, weekly video check-ins."'},letter:'B',funds:+5,anger:+25,madness:+15,hint:'💰+5 😡+25 🤪+15',extreme:true},{text:{cn:'「『建议』她『主动』离职，承诺给N+3补偿，签保密协议，对外说是『个人发展原因』」',en:'"\'Suggest\' she \'voluntarily\' resign. Offer N+3 severance. NDA required. Public story: \'personal development.\'"'},letter:'C',funds:-10,anger:+40,madness:+25,hint:'💰-10 😡+40 🤪+25',extreme:true}]},
+{id:26,tag:{cn:'🎮 摸鱼',en:'🎮 Slacking'},title:{cn:'摸鱼の大数据',en:'Slacking Big Data'},bg:{cn:'IT部门给你部署了一套「员工行为分析系统」——可以监控每个人的屏幕、键盘敲击频率、鼠标移动轨迹、甚至 facial expression。数据显示：平均每天每个员工有2.3小时「非工作行为」，其中35%在刷短视频，28%在网购，20%在炒股，17%在……看招聘网站。',en:'IT deployed an "employee behavior analytics system" — monitoring screens, keystroke frequency, mouse patterns, even facial expressions. Data shows: average 2.3 hours of "non-work activity" per employee daily. 35% short videos. 28% online shopping. 20% stock trading. 17%… job boards.'},opts:[{text:{cn:'「立即拆除监控系统，信任员工，改为结果导向的考核」',en:'"Dismantle the surveillance immediately. Trust employees. Switch to outcome-based evaluation."'},letter:'A',funds:-5,anger:-15,madness:0,hint:'💰-5 😡-15',extreme:false},{text:{cn:'「把数据做成排行榜，每周公布『效率之王』和『摸鱼之王』，后者扣绩效」',en:'"Publish weekly leaderboards. \'Efficiency King\' and \'Slacking King.\' Bottom rankers lose performance bonuses."'},letter:'B',funds:+10,anger:+25,madness:+15,hint:'💰+10 😡+25 🤪+15',extreme:true},{text:{cn:'「根据监控数据『优化』人员——每天非工作时间超过1小时的自动进入『绩效改进池』」',en:'"\'Optimize\' based on data — anyone over 1 hour non-work time daily auto-enters the \'Performance Improvement Pool.\'"'},letter:'C',funds:+15,anger:+35,madness:+25,hint:'💰+15 😡+35 🤪+25',extreme:true}]},
+{id:27,tag:{cn:'📈 股价',en:'📈 Stock'},title:{cn:'股价の过山车',en:'The Stock Price Rollercoaster'},bg:{cn:'公司上市了！但股价像过山车——上市首日暴涨200%，一周后跌回发行价，一个月后跌破发行价40%。股东群里有人@你：「X总，什么时候回购？什么时候发利好？」财经媒体标题：「XX科技：泡沫破裂还是价值回归？」',en:'Your company went public! But the stock is a rollercoaster — up 200% on day one, back to IPO price in a week, down 40% a month later. Shareholders are @-ing you: "When\'s the buyback? When\'s the good news?" Financial headlines: "XX Tech: Bubble burst or value correction?"'},opts:[{text:{cn:'「发布真实财报，召开投资者说明会，坦诚沟通公司现状」',en:'"Release honest earnings. Hold an investor call. Transparent communication about where we stand."'},letter:'A',funds:-10,anger:0,madness:0,hint:'💰-10',extreme:false},{text:{cn:'「让PR发通稿：『股价波动是市场对创新者的考验，我们对此充满信心』——同时你自己悄悄减持」',en:'"Have PR release: \'Market volatility tests innovators. We remain confident.\' — while you quietly sell your shares."'},letter:'B',funds:+25,anger:+15,madness:+15,hint:'💰+25 😡+15 🤪+15',extreme:true},{text:{cn:'「宣布『重大利好消息』——公司和某「行业领先企业」达成战略合作（其实是你表弟开的小卖部）」',en:'"Announce \'major strategic partnership\' with an \'industry-leading enterprise\' (actually your cousin\'s convenience store)."'},letter:'C',funds:+20,anger:+20,madness:+25,hint:'💰+20 😡+20 🤪+25',extreme:true}]},
+{id:28,tag:{cn:'🤖 AI',en:'🤖 AI'},title:{cn:'AI取代人类？',en:'AI Replacing Humans?'},bg:{cn:'CTO兴奋地告诉你：「老板，GPT-5出来了！我测试了一下，它写代码的速度是人类程序员的10倍，而且不要加班费、不请假、不跳槽！」他眼睛里闪烁着危险的光芒：「如果我们把开发团队裁掉80%，用AI替代……」',en:'The CTO is excited: "Boss, GPT-5 is out! I tested it — codes 10x faster than humans. No overtime pay. No sick days. No resignations!" His eyes gleam dangerously: "If we cut Engineering by 80% and replace with AI…"'},opts:[{text:{cn:'「AI是工具不是替代，用来提升效率，不裁员，给员工培训AI技能」',en:'"AI is a tool, not a replacement. Boost efficiency. No layoffs. Train staff on AI skills."'},letter:'A',funds:-15,anger:-10,madness:0,hint:'💰-15 😡-10',extreme:false},{text:{cn:'「试点：裁掉50%初级开发，保留 senior 做AI审核，省下的钱给我换辆新车」',en:'"Pilot program: cut 50% junior devs. Keep seniors for AI review. Use savings for… my new car."'},letter:'B',funds:+30,anger:+35,madness:+20,hint:'💰+30 😡+35 🤪+20',extreme:true},{text:{cn:'「全部裁掉！包括CTO！以后公司就我一个人+GPT-5，我是prompt工程师兼CEO」',en:'"Fire EVERYONE! Including the CTO! From now on it\'s just me and GPT-5. I\'m the Prompt Engineer / CEO."'},letter:'C',funds:+40,anger:+50,madness:+30,hint:'💰+40 😡+50 🤪+30',extreme:true}]},
+{id:29,tag:{cn:'🌏 远程',en:'🌏 Remote'},title:{cn:'远程办公の终结',en:'The End of Remote Work'},bg:{cn:'疫情结束两年了，还有40%的员工「习惯」了远程办公。他们分布在三亚、大理、甚至泰国清迈。你发起视频会议时，背景里有海浪声、鸟鸣声、还有……按摩店的背景音乐？王工的上半身穿着衬衫，下半身明显是沙滩裤。',en:'Two years post-pandemic and 40% of staff still "prefer" remote work. They\'re in Sanya, Dali, even Chiang Mai. During your video call you hear ocean waves, birds, and… spa music? Dave is wearing a dress shirt on top. Beach shorts clearly visible below.'},opts:[{text:{cn:'「维持混合办公，每周2天远程，信任员工自主安排」',en:'"Keep hybrid. Two days remote weekly. Trust people to manage themselves."'},letter:'A',funds:-5,anger:-10,madness:0,hint:'💰-5 😡-10',extreme:false},{text:{cn:'「取消远程办公，全员回公司坐班，『远程办公期间』的工资按70%发放（追回差额）」',en:'"Cancel remote work. Everyone back to office. \'Remote period\' salaries recalculated at 70%. Retroactive."'},letter:'B',funds:+20,anger:+30,madness:+20,hint:'💰+20 😡+30 🤪+20',extreme:true},{text:{cn:'「允许远程，但要求每15分钟截图上传，且背景必须是公司绿幕（自费购买）」',en:'"Remote allowed. But mandatory screenshots every 15 minutes. Background must be company green screen. Self-funded."'},letter:'C',funds:+5,anger:+35,madness:+25,hint:'💰+5 😡+35 🤪+25',extreme:true}]},
+{id:30,tag:{cn:'💬 八卦',en:'💬 Gossip'},title:{cn:'办公室八卦の风暴',en:'The Office Gossip Storm'},bg:{cn:'公司内网匿名论坛炸了。一条帖子：《扒一扒我们公司那位「重生」老板的奇葩操作》，24小时阅读量10万+，回复3000+。热评第一：「他上次让我周末改需求，我说我有事，他问什么事，我说我奶奶过生日，他说『你奶奶能活几个生日，项目 deadline 只有一个』。」',en:'The company anonymous forum exploded. A post: "Exposing Our \'Reborn\' CEO\'s Insane Management" — 100K views in 24 hours, 3,000+ replies. Top comment: "He asked me to work last weekend. I said I had plans. He asked what. I said my grandma\'s birthday. He said: \'How many birthdays will your grandma have? There\'s only ONE deadline.\'"'},opts:[{text:{cn:'「发全员信诚恳道歉，承诺改进，邀请员工监督」',en:'"Send sincere company-wide apology. Promise improvement. Invite employee oversight."'},letter:'A',funds:-5,anger:-20,madness:0,hint:'💰-5 😡-20',extreme:false},{text:{cn:'「让法务发律师函给论坛运营方，要求删帖+提供发帖人IP，同时内部排查『内鬼』」',en:'"Have Legal send cease-and-desist to the forum. Demand post removal + poster IP. Internal witch hunt for the \'mole.\'"'},letter:'B',funds:-10,anger:+30,madness:+20,hint:'💰-10 😡+30 🤪+20',extreme:true},{text:{cn:'「亲自回帖：『我就是那个老板，我为自己代言。觉得不爽的，明天来我办公室当面说』」',en:'"Reply personally: \'I\'m that CEO. I speak for myself. Unhappy? Come to my office tomorrow and say it to my face.\'"'},letter:'C',funds:0,anger:+25,madness:+25,hint:'😡+25 🤪+25',extreme:true}]}
+];
+const EVENTS_31_50=[
+{id:31,tag:{cn:'🎯 KPI',en:'🎯 KPI'},title:{cn:'KPIの死亡螺旋',en:'The KPI Death Spiral'},bg:{cn:'Q3季度KPI复盘会。销售部完成了120%（靠刷单），技术部完成了30%（因为需求改了8次），产品部完成了0%（因为OKR定的是「提升用户体验」，无法量化）。你看着这张成绩单，陷入了沉思。',en:'Q3 KPI review. Sales: 120% (via fake orders). Engineering: 30% (requirements changed 8 times). Product: 0% (OKR was "improve user experience" — unmeasurable). You stare at the report.'},opts:[{text:{cn:'「取消KPI，改为OKR+360度评估，注重长期价值而非短期数字」',en:'"Kill KPIs. Switch to OKRs + 360 reviews. Focus on long-term value, not short-term numbers."'},letter:'A',funds:-10,anger:-10,madness:0,hint:'💰-10 😡-10',extreme:false},{text:{cn:'「加码！Q4所有人KPI翻倍，完不成的自动进入『优化名单』」',en:'"Double down! Q4 KPIs doubled for everyone. Miss them? Auto-enter the \'optimization list.\'"'},letter:'B',funds:+15,anger:+30,madness:+20,hint:'💰+15 😡+30 🤪+20',extreme:true},{text:{cn:'「宣布实行『末位淘汰制』——每月最后一名直接走人，不管绩效绝对值多少」',en:'"Implement stack ranking. Bottom performer every month is out. Regardless of absolute performance."'},letter:'C',funds:+10,anger:+35,madness:+25,hint:'💰+10 😡+35 🤪+25',extreme:true}]},
+{id:32,tag:{cn:'🎁 福利',en:'🎁 Perks'},title:{cn:'福利の通货膨胀',en:'Perk Inflation'},bg:{cn:'竞争对手公司开始提供「四天工作制」「无限带薪假」「宠物保险」「冻卵补贴」。你的HR焦虑地问你：「老板，我们要不要跟进？」你看了看公司的福利清单：免费白开水、生日当天多休1小时（需提前两周申请）、以及「老板亲自写的生日贺卡」。',en:'Competitors now offer "4-day work weeks," "unlimited PTO," "pet insurance," and "egg-freezing subsidies." Your HR anxiously asks: "Boss, should we match?" You look at your perks list: free tap water, 1 extra hour off on your birthday (apply 2 weeks in advance), and "a personally handwritten birthday card from the CEO."'},opts:[{text:{cn:'「逐步升级福利，引入弹性工作制和健康保险，跟上行业标准」',en:'"Gradually upgrade perks. Introduce flexible hours and health insurance. Match industry standards."'},letter:'A',funds:-20,anger:-15,madness:0,hint:'💰-20 😡-15',extreme:false},{text:{cn:'「宣布我们的『独特福利』——每天可以『免费』使用公司厕所，『免费』饮用公司自来水」',en:'"Announce our \'unique perks\' — \'free\' use of company bathrooms, \'free\' company tap water."'},letter:'B',funds:+10,anger:+25,madness:+15,hint:'💰+10 😡+25 🤪+15',extreme:true},{text:{cn:'「推出『反内卷福利』——每天强制加班到22点，但提供『免费』行军床和『免费』泡面」',en:'"Launch \'anti-hustle-culture perks\' — mandatory work until 10 PM, but \'free\' camp beds and \'free\' instant noodles."'},letter:'C',funds:+5,anger:+30,madness:+20,hint:'💰+5 😡+30 🤪+20',extreme:true}]},
+{id:33,tag:{cn:'🔒 竞业',en:'🔒 Non-Compete'},title:{cn:'竞业协议の枷锁',en:'The Non-Compete Chains'},bg:{cn:'你的前CTO离职后加入了竞争对手，还带走了两个核心工程师。你翻出了他们签的竞业协议——条款极其严格，违约金500万，竞业期2年，范围覆盖「全球互联网行业」。但律师告诉你：「这类条款在法庭上大概率被认定无效。」',en:'Your ex-CTO joined a competitor and took two core engineers. You pull up their non-compete clauses — $700K penalty, 2-year term, covers "the entire global internet industry." But your lawyer says: "These are likely unenforceable in court."'},opts:[{text:{cn:'「放弃诉讼，好聚好散，专注把现有团队带好」',en:'"Drop the lawsuit. Part ways peacefully. Focus on the team you have."'},letter:'A',funds:-5,anger:-5,madness:0,hint:'💰-5 😡-5',extreme:false},{text:{cn:'「起诉！同时给新公司HR发邮件，告知他们招了『有竞业限制』的人员，建议他们『慎重考虑』」',en:'"Sue! And email the new company\'s HR: they\'ve hired someone with \'active non-compete restrictions.\' Suggest they \'reconsider.\'"'},letter:'B',funds:-15,anger:+25,madness:+15,hint:'💰-15 😡+25 🤪+15',extreme:true},{text:{cn:'「把竞业协议改成『终身制』，覆盖范围扩大到「所有碳基生物可从事的行业」，入职必须签」',en:'"Make non-competes LIFETIME. Expand coverage to "all industries carbon-based lifeforms can work in." Mandatory signature."'},letter:'C',funds:+5,anger:+40,madness:+30,hint:'💰+5 😡+40 🤪+30',extreme:true}]},
+{id:34,tag:{cn:'📹 直播',en:'📹 Livestream'},title:{cn:'老板直播带货',en:'The CEO Livestream'},bg:{cn:'市场部提议：「老板，现在流行老板亲自直播带货，您要不要试试？就卖我们公司自己的产品，顺便展示一下『亲民』形象。」你看着镜子里的自己——黑眼圈、三天没刮的胡子、以及一件穿了五年的POLO衫。',en:'Marketing proposes: "Boss, CEO livestream selling is trending. Want to try? Sell our own product and show your \'approachable\' side." You look in the mirror — dark circles, 3-day stubble, and a polo shirt you\'ve worn for 5 years.'},opts:[{text:{cn:'「找专业主播合作，我在旁边当配角，不抢风头」',en:'"Partner with a professional streamer. I\'ll be the sidekick. No spotlight stealing."'},letter:'A',funds:-10,anger:0,madness:0,hint:'💰-10',extreme:false},{text:{cn:'「亲自上！要求全体员工必须观看并下单，观看时长和下单金额计入KPI」',en:'"I\'m doing it myself! ALL employees must watch AND buy. View time and purchase amount count toward KPIs."'},letter:'B',funds:+15,anger:+25,madness:+15,hint:'💰+15 😡+25 🤪+15',extreme:true},{text:{cn:'「直播『老板的一天』——从凌晨4点起床开始，24小时不间断，展示『奋斗者』的真实生活」',en:'"Livestream \'A Day in the Life of the CEO\' — starting 4 AM, 24 hours non-stop. Show the \'hustler\' reality."'},letter:'C',funds:+5,anger:+20,madness:+20,hint:'💰+5 😡+20 🤪+20',extreme:true}]},
+{id:35,tag:{cn:'🧘 冥想',en:'🧘 Meditation'},title:{cn:'正念冥想の异化',en:'Mindfulness Weaponized'},bg:{cn:'HR引入了一位「企业正念导师」，要在公司推广「冥想文化」。导师的第一堂课：「当你感到愤怒时，不要抗拒，要观察它。想象你的愤怒是一朵云，慢慢地飘走……」王工举手：「老师，如果那朵云飘回来了怎么办？」导师微笑：「那就再观察一次。」',en:'HR brought in a "corporate mindfulness coach" to promote "meditation culture." First lesson: "When angry, don\'t resist. Observe it. Imagine your anger as a cloud, slowly drifting away…" Dave raises his hand: "What if the cloud comes back?" The coach smiles: "Observe it again."'},opts:[{text:{cn:'「支持！但改为自愿参加，公司提供安静的冥想空间，不占用工作时间」',en:'"Support it! But make it voluntary. Provide quiet meditation space. Not during work hours."'},letter:'A',funds:-10,anger:-5,madness:0,hint:'💰-10 😡-5',extreme:false},{text:{cn:'「强制全员每天冥想30分钟，计入考勤，冥想时播放『老板语录』作为背景音」',en:'"Mandatory 30-minute daily meditation for all. Counts as work time. Background audio: \'CEO Wisdom Quotes.\'"'},letter:'B',funds:+5,anger:+25,madness:+15,hint:'💰+5 😡+25 🤪+15',extreme:true},{text:{cn:'「把冥想改成『感恩冥想』——每天闭眼30分钟，想象老板对你们有多好」',en:'"Convert to \'Gratitude Meditation\' — 30 minutes daily with eyes closed, imagining how good the CEO is to you."'},letter:'C',funds:0,anger:+30,madness:+25,hint:'😡+30 🤪+25',extreme:true}]},
+{id:36,tag:{cn:'🐛 Bug',en:'🐛 Bug'},title:{cn:'祖传Bugの诅咒',en:'The Cursed Legacy Bug'},bg:{cn:'系统里有一个存在了3年的Bug——每隔一段时间会随机把用户的头像换成一只鸭子。所有工程师都试过修复，但越修越严重，现在已经进化到会把用户名改成「Quack」。CTO说：「这个Bug有灵性，建议供起来。」',en:'A 3-year-old bug randomly replaces user avatars with a duck. Every engineer has tried to fix it. It got worse. Now it also changes usernames to "Quack." The CTO says: "This bug has a spirit. I suggest we worship it."'},opts:[{text:{cn:'「成立专项组，给充足时间和预算，务必根治」',en:'"Form a task force. Adequate time and budget. Fix it for good."'},letter:'A',funds:-15,anger:-5,madness:0,hint:'💰-15 😡-5',extreme:false},{text:{cn:'「把Bug包装成『彩蛋功能』，写进产品文档，对外宣称是『品牌IP』」',en:'"Rebrand the bug as an \'Easter Egg.\' Add it to product docs. Call it our \'brand IP.\'"'},letter:'B',funds:+10,anger:+15,madness:+15,hint:'💰+10 😡+15 🤪+15',extreme:true},{text:{cn:'「举办『拜鸭大会』，全公司给这只鸭子立牌位，每天上香，求它别搞事」',en:'"Hold a \'Duck Worship Ceremony.\' Build a shrine for the duck. Daily incense. Pray it behaves."'},letter:'C',funds:-5,anger:+20,madness:+30,hint:'💰-5 😡+20 🤪+30',extreme:true}]},
+{id:37,tag:{cn:'🎓 学历',en:'🎓 Education'},title:{cn:'学历歧视の反击',en:'Degree Discrimination'},bg:{cn:'你在招聘要求里写了「985/211优先」，结果被人截图发到了网上，标题：《XX公司CEO公开学历歧视》。评论区炸了：「我二本怎么了？」「能力跟学历有毛线关系？」「这老板自己什么学历？」——你查了一下，你确实是985。',en:'You wrote "985/211 preferred" in a job post. Someone screenshotted it. Headline: "XX CEO Openly Discriminates by Degree." Comments explode: "What\'s wrong with second-tier?" "Ability ≠ degree!" "What\'s the CEO\'s degree?" — You check. You ARE 985.'},opts:[{text:{cn:'「删除学历要求，改为能力测试，公开道歉」',en:'"Remove degree requirements. Switch to skills-based assessment. Public apology."'},letter:'A',funds:-5,anger:-15,madness:0,hint:'💰-5 😡-15',extreme:false},{text:{cn:'「坚持985/211，但加上『特别优秀者可放宽』——然后永远以『不够特别』为由拒绝」',en:'"Keep 985/211 but add \'exceptional candidates may be considered\' — then never consider anyone exceptional enough."'},letter:'B',funds:0,anger:+25,madness:+15,hint:'😡+25 🤪+15',extreme:true},{text:{cn:'「反向操作——只招非985，宣称『我们要打破学历垄断，给普通人机会』，实际工资压30%」',en:'"Reverse it — only hire non-985. Claim \'we\'re breaking degree monopoly, giving ordinary people chances.\' Actually pay 30% less."'},letter:'C',funds:+10,anger:+30,madness:+20,hint:'💰+10 😡+30 🤪+20',extreme:true}]},
+{id:38,tag:{cn:'🎮 游戏化',en:'🎮 Gamification'},title:{cn:'工作游戏化の灾难',en:'Gamification Gone Wrong'},bg:{cn:'你读了一本《游戏化思维改变世界》，决定把公司管理全面游戏化。于是出现了：「提交代码+10分」「找到Bug+5分」「加班1小时+20分」「全勤+50分」。积分可以兑换：100分=公司马克杯，500分=老板签名照，10000分=「与老板共进午餐」（限量）。',en:'You read "Gamification Will Change the World" and decided to gamify everything. Now: "Commit code: +10 pts" "Find bug: +5 pts" "Overtime 1hr: +20 pts" "Perfect attendance: +50 pts." Redeem: 100 pts = company mug. 500 pts = signed CEO photo. 10,000 pts = "Lunch with CEO" (limited)."'},opts:[{text:{cn:'「取消游戏化，改为公平的绩效奖金制度」',en:'"Cancel gamification. Switch to fair performance bonuses."'},letter:'A',funds:-10,anger:-10,madness:0,hint:'💰-10 😡-10',extreme:false},{text:{cn:'「升级！引入『排位赛』——每月根据积分排名，青铜/白银/黄金/钻石，钻石可优先选择工位」',en:'"Upgrade! Introduce \'Ranked Season\' — monthly points-based tiers: Bronze/Silver/Gold/Diamond. Diamonds get first pick of desk locations."'},letter:'B',funds:+5,anger:+20,madness:+15,hint:'💰+5 😡+20 🤪+15',extreme:true},{text:{cn:'「推出『抽卡系统』——完成工作获得『奋斗券』，可抽取SSR级奖励：『老板免骂券』『迟到豁免券』」',en:'"Launch a gacha system! Complete tasks for \'Hustle Tickets\' to pull SSR rewards: \'CEO Yell Immunity\' \'Tardiness Pass.\'"'},letter:'C',funds:+10,anger:+25,madness:+25,hint:'💰+10 😡+25 🤪+25',extreme:true}]},
+{id:39,tag:{cn:'🎭 面试',en:'🎭 Interview'},title:{cn:'面试の表演艺术',en:'The Interview Theater'},bg:{cn:'你在面试一位候选人。他简历写着「精通Java/Python/Go/Rust/C++/JS/TS」，「主导过千万级DAU产品」，「GitHub 10k stars」。你问：「你最大的缺点是什么？」他答：「我太追求完美了，经常加班到很晚。」你内心翻了个白眼——这是第10086个「太追求完美」了。',en:'You\'re interviewing a candidate. Resume: "Expert in Java/Python/Go/Rust/C++/JS/TS." "Led 10M DAU product." "GitHub 10k stars." You ask: "What\'s your biggest weakness?" They say: "I\'m too perfectionist. I often work late." You internally roll your eyes — the 10,086th "too perfectionist."'},opts:[{text:{cn:'「坦诚沟通，介绍真实的工作环境和挑战，让候选人自己做决定」',en:'"Be honest. Share real work environment and challenges. Let the candidate decide."'},letter:'A',funds:-5,anger:0,madness:0,hint:'💰-5',extreme:false},{text:{cn:'「录用！但offer上写明『期望薪资以实际发放为准，公司保留最终解释权』」',en:'"Hire them! But add to offer: \'Expected salary subject to actual disbursement. Company reserves final interpretation rights.\'"'},letter:'B',funds:+5,anger:+15,madness:+10,hint:'💰+5 😡+15 🤪+10',extreme:true},{text:{cn:'「当场出题：『用汇编语言写一个区块链浏览器，限时2小时』——然后你去吃午饭」',en:'"On-the-spot challenge: \'Write a blockchain explorer in Assembly. 2-hour limit.\' — Then you go to lunch."'},letter:'C',funds:0,anger:+20,madness:+20,hint:'😡+20 🤪+20',extreme:true}]},
+{id:40,tag:{cn:'📧 邮件',en:'📧 Email'},title:{cn:'邮件の已读不回',en:'The Read Receipt Rebellion'},bg:{cn:'你发了一封全员邮件，主题是《关于进一步提升公司执行力的若干意见》，正文5000字，附件3个PDF。24小时后，已读率23%，回复率0%。你在钉钉群里问：「大家看了邮件吗？」沉默。你又问：「有什么想法？」王工回复：「收到。」——这是唯一的回复。',en:'You sent an all-hands email: "Thoughts on Further Improving Company Execution." 5,000 words. 3 PDF attachments. After 24 hours: 23% read rate. 0% reply rate. You ask in Slack: "Did everyone read the email?" Silence. "Any thoughts?" Dave replies: "Noted." — The only response.'},opts:[{text:{cn:'「把邮件内容精简到500字，开15分钟全员会口头传达核心要点」',en:'"Trim the email to 500 words. Hold a 15-minute all-hands to verbally communicate key points."'},letter:'A',funds:-5,anger:-5,madness:0,hint:'💰-5 😡-5',extreme:false},{text:{cn:'「要求所有人写500字读后感，抄送全公司，未交者扣绩效」',en:'"Require 500-word reflection essays from everyone. CC the whole company. Non-submission = performance deduction."'},letter:'B',funds:0,anger:+25,madness:+15,hint:'😡+25 🤪+15',extreme:true},{text:{cn:'「开发『邮件已读追踪系统』，已读不回者自动计入『执行力黑名单』，影响晋升」',en:'"Build an \'email read tracking system.\' Read-but-no-reply auto-enters \'Execution Blacklist.\' Affects promotions."'},letter:'C',funds:-5,anger:+30,madness:+20,hint:'💰-5 😡+30 🤪+20',extreme:true}]},
+{id:41,tag:{cn:'🎄 节日',en:'🎄 Holiday'},title:{cn:'节日礼物の灾难',en:'The Holiday Gift Disaster'},bg:{cn:'圣诞节要到了，行政部准备了礼物：每人一个苹果（成本3块，包装后看起来像30块）。但采购搞错了，买了「蛇果」——一种长得像苹果但味道像土豆的水果。员工们面面相觑，王工咬了一口，表情复杂：「老板，这苹果……是生的。」',en:'Christmas is coming. Admin prepared gifts: one apple per person ($0.50, packaged to look like $5). But procurement messed up and bought "snake fruit" — looks like an apple, tastes like a potato. Employees stare at each other. Dave takes a bite, face contorting: "Boss, this apple… it\'s raw."'},opts:[{text:{cn:'「重新采购真正的礼物，预算人均100，让员工自选」',en:'"Re-procure real gifts. $15 per person budget. Let employees choose."'},letter:'A',funds:-15,anger:-10,madness:0,hint:'💰-15 😡-10',extreme:false},{text:{cn:'「将错就错，宣称这是『进口珍稀水果』，市场价50一个，员工不识货」',en:'"Roll with it. Claim these are \'imported rare fruits.\' Market price: $7 each. Employees just don\'t appreciate fine things."'},letter:'B',funds:+5,anger:+20,madness:+15,hint:'💰+5 😡+20 🤪+15',extreme:true},{text:{cn:'「宣布『礼物即心意』，明年开始取消实物礼物，改为『精神祝福』——老板亲笔贺卡」',en:'"Announce \'gifts are about intention.\' Cancel physical gifts starting next year. Switch to \'spiritual blessings\' — handwritten CEO cards."'},letter:'C',funds:+10,anger:+25,madness:+15,hint:'💰+10 😡+25 🤪+15',extreme:true}]},
+{id:42,tag:{cn:'🚪 加班',en:'🚪 Overtime'},title:{cn:'加班の福报',en:'The Overtime Blessing'},bg:{cn:'晚上22:30，你路过办公区，发现还有3个人没走。你「感动」了，拍了张照片发群里：「看看我们的奋斗者！这才是公司需要的精神！」然后你回家了。第二天你发现那3个人在群里回复：「老板，我们在等打车报销的审批……」',en:'10:30 PM. You pass the office. Three people still working. You\'re "moved." Take a photo, post in group: "Look at our hustlers! THIS is the spirit we need!" Then you go home. Next day you see their replies: "Boss, we were waiting for our rideshare reimbursement approval…"'},opts:[{text:{cn:'「立即审批所有报销，设置自动审批流程，不让员工等」',en:'"Approve all reimbursements immediately. Set up auto-approval. Don\'t make people wait."'},letter:'A',funds:-10,anger:-10,madness:0,hint:'💰-10 😡-10',extreme:false},{text:{cn:'「取消打车报销，改为『夜班补贴』——每晚10点后每小时的补贴等于当地最低工资的10%」',en:'"Cancel rideshare reimbursement. Replace with \'night shift subsidy\' — 10% of local minimum wage per hour after 10 PM."'},letter:'B',funds:+10,anger:+25,madness:+15,hint:'💰+10 😡+25 🤪+15',extreme:true},{text:{cn:'「把照片做成海报挂在公司入口，标题：《奋斗者的光芒》，下面小字：『自愿加班，无额外报酬』」',en:'"Turn the photo into a lobby poster. Title: \'The Glow of Hustlers.\' Fine print: \'Voluntary overtime. No extra compensation.\'"'},letter:'C',funds:0,anger:+30,madness:+20,hint:'😡+30 🤪+20',extreme:true}]},
+{id:43,tag:{cn:'💻 电脑',en:'💻 Equipment'},title:{cn:'设备の古董级',en:'Ancient Equipment'},bg:{cn:'王工的电脑是2015年的MacBook Pro，开机需要8分钟，编译项目要20分钟，期间他可以泡杯咖啡、刷完短视频、再做一组俯卧撑。他第10次申请换新电脑，IT说：「还能开机就说明没问题，公司预算紧张。」',en:'Dave\'s laptop is a 2015 MacBook Pro. Boot time: 8 minutes. Build time: 20 minutes — enough to make coffee, scroll TikTok, and do a set of pushups. His 10th replacement request. IT says: "It still boots. Budget is tight."'},opts:[{text:{cn:'「给所有研发换M3 MacBook Pro，生产力工具不能省」',en:'"Upgrade all devs to M3 MacBook Pros. Productivity tools are non-negotiable."'},letter:'A',funds:-25,anger:-15,madness:0,hint:'💰-25 😡-15',extreme:false},{text:{cn:'「批准换电脑，但换成『公司定制版』——配置减半，预装监控软件，外壳印公司logo」',en:'"Approve replacements, but \'company custom edition\' — half the specs, pre-installed monitoring, company logo on lid."'},letter:'B',funds:-5,anger:+20,madness:+10,hint:'💰-5 😡+20 🤪+10',extreme:true},{text:{cn:'「宣布『自带设备办公计划』——员工用自己的电脑，公司每月补贴50块，但所有数据归公司」',en:'"Launch \'BYOD Program\' — use personal laptops. $7 monthly stipend. But ALL data belongs to the company."'},letter:'C',funds:+15,anger:+30,madness:+20,hint:'💰+15 😡+30 🤪+20',extreme:true}]},
+{id:44,tag:{cn:'🎓 导师',en:'🎓 Mentorship'},title:{cn:'导师制の形式主义',en:'Mentorship Theater'},bg:{cn:'公司推行「导师制」，每位新人配一位资深导师。但你发现：导师们把新人当助理用——取快递、买咖啡、接孩子。新人在群里吐槽：「我导师教我的第一件事是怎么用他的咖啡机，第二件事是他家地址（让我帮他取快递）。」',en:'Company launched a "mentorship program." Every newbie gets a senior mentor. But you discover: mentors use mentees as assistants — fetch coffee, pick up packages, collect their kids. Newbie complains in chat: "My mentor taught me two things: how to use his coffee machine, and his home address (for package pickup)."'},opts:[{text:{cn:'「重新设计导师制，明确导师职责和考核标准，保护新人权益」',en:'"Redesign mentorship. Clear mentor responsibilities and evaluation. Protect newbie rights."'},letter:'A',funds:-5,anger:-10,madness:0,hint:'💰-5 😡-10',extreme:false},{text:{cn:'「维持现状，但要求新人写『导师感恩日记』，每周提交，作为转正考核」',en:'"Keep status quo. But require newbies to write \'Mentor Gratitude Journals.\' Weekly submission. Part of probation review."'},letter:'B',funds:0,anger:+25,madness:+15,hint:'😡+25 🤪+15',extreme:true},{text:{cn:'「升级导师制为『主仆制』——新人必须称呼导师为『大人』，每天行礼，违者扣绩效」',en:'"Upgrade to \'Lord-Servant System.\' Newbies must address mentors as \'My Lord.\' Daily bowing required. Violators lose performance points."'},letter:'C',funds:0,anger:+35,madness:+30,hint:'😡+35 🤪+30',extreme:true}]},
+{id:45,tag:{cn:'🎤 演讲',en:'🎤 Speech'},title:{cn:'TED式演讲の灾难',en:'The TED Talk Disaster'},bg:{cn:'你被邀请去一个行业大会做 keynote，主题是《从0到1：我的创业哲学》。你准备了50页PPT，开场讲了30分钟「我当年睡地下室」的故事。台下开始有人刷手机。当你讲到第40页「我们公司明年的战略是……」时，主持人上来轻声说：「X总，您的时间到了。」你看了眼手表——才讲了2小时。',en:'You\'re invited to keynote an industry conference: "From Zero to One: My Entrepreneurial Philosophy." You prepared 50 slides. Opened with 30 minutes of "when I slept in basements." Audience starts checking phones. When you hit slide 40 "Our strategic vision for next year…" the host whispers: "Mr. X, your time is up." You check your watch — it\'s been 2 hours.'},opts:[{text:{cn:'「尴尬但礼貌地结束，承认超时，会后私下向主办方道歉」',en:'"Wrap up gracefully. Admit you went over. Apologize to organizers privately after."'},letter:'A',funds:-5,anger:0,madness:0,hint:'💰-5',extreme:false},{text:{cn:'「继续讲！让主办方再给我1小时，我付场地费，谁走谁就是不尊重我」',en:'"Keep going! Tell organizers to give me another hour. I\'ll pay venue fees. Anyone who leaves disrespects me."'},letter:'B',funds:-10,anger:+15,madness:+20,hint:'💰-10 😡+15 🤪+20',extreme:true},{text:{cn:'「当场宣布：『既然大家这么热情，我再加一场闭门分享，门票5000，限50人』」',en:'"Announce on stage: \'Since you\'re so engaged, I\'m adding an exclusive closed-door session. $700 ticket. 50 seats only.\'"'},letter:'C',funds:+15,anger:+20,madness:+20,hint:'💰+15 😡+20 🤪+20',extreme:true}]},
+{id:46,tag:{cn:'🎁 抽奖',en:'🎁 Lottery'},title:{cn:'年会抽奖の黑幕',en:'The Rigged Lottery'},bg:{cn:'年会特等奖是「iPhone 15 Pro Max」，你偷偷把中奖券塞给了自己的侄子（他在公司实习）。抽奖时，主持人念出名字，全场寂静。你侄子站起来，全场鼓掌——但掌声很敷衍。有人在群里发：「特等奖获得者工号001，入职日期：上周。」',en:'The grand prize at the annual party is an iPhone 15 Pro Max. You secretly slipped the winning ticket to your nephew (interning at the company). Host reads the name. Silence. Your nephew stands. Polite applause. Someone posts in chat: "Grand prize winner: Employee ID 001. Start date: last week."'},opts:[{text:{cn:'「承认错误，重新抽奖，自己退出抽奖资格」',en:'"Admit the mistake. Redraw. Disqualify myself from all future lotteries."'},letter:'A',funds:-10,anger:-15,madness:0,hint:'💰-10 😡-15',extreme:false},{text:{cn:'「宣称『001是特殊人才编号，不代表入职顺序』，同时把爆料者找出来谈话」',en:'"Claim \'001 is a special talent ID, not seniority.\' And find whoever leaked this for a \'conversation.\'"'},letter:'B',funds:0,anger:+25,madness:+15,hint:'😡+25 🤪+15',extreme:true},{text:{cn:'「明年特等奖改为『与老板合影一张』，成本0，还能培养感恩文化」',en:'"Next year\'s grand prize: \'A photo with the CEO.\' Cost: zero. Also builds gratitude culture."'},letter:'C',funds:+10,anger:+30,madness:+20,hint:'💰+10 😡+30 🤪+20',extreme:true}]},
+{id:47,tag:{cn:'🧹 卫生',en:'🧹 Cleaning'},title:{cn:'办公室卫生の战争',en:'The Cleaning Wars'},bg:{cn:'行政部取消了保洁阿姨，改为「员工轮值打扫」——每人每周负责一天，包括扫地、倒垃圾、洗厕所。王工在群里发了一张厕所照片，配文：「我今天『值班』，但我不确定我是在打扫犯罪现场还是在准备手术。」',en:'Admin canceled the cleaning service. Switched to "employee rotation cleaning" — one day per person weekly, including sweeping, trash, and bathrooms. Dave posts a bathroom photo in chat: "I\'m \'on duty\' today. Not sure if I\'m cleaning a crime scene or prepping for surgery."'},opts:[{text:{cn:'「恢复保洁，员工的时间应该用在创造价值上」',en:'"Restore cleaning service. Employee time should create value."'},letter:'A',funds:-10,anger:-10,madness:0,hint:'💰-10 😡-10',extreme:false},{text:{cn:'「维持轮值，但增加『卫生评分』——每月评分最低的扣绩效，最高的奖励『免打扫券』」',en:'"Keep rotation but add \'cleanliness scores.\' Lowest monthly score loses performance points. Highest gets a \'cleaning exemption pass.\'"'},letter:'B',funds:+5,anger:+20,madness:+10,hint:'💰+5 😡+20 🤪+10',extreme:true},{text:{cn:'「把打扫变成『团建活动』——每月一次『大扫除日』，全员参加，拍照发朋友圈，配文『快乐工作』」',en:'"Make cleaning a \'team-building activity.\' Monthly \'Big Clean Day.\' Everyone participates. Photos for social media. Caption: \'Happy Working!\'"'},letter:'C',funds:0,anger:+25,madness:+20,hint:'😡+25 🤪+20',extreme:true}]},
+{id:48,tag:{cn:'🎵 音乐',en:'🎵 Music'},title:{cn:'办公室BGMの独裁',en:'The Office Music Dictator'},bg:{cn:'你决定给办公室放背景音乐「提升工作效率」。你选的歌单包括：《义勇军进行曲》《运动员进行曲》《感恩的心》循环播放。第三天，王工戴着降噪耳机上班，被你说「不融入团队」。他说：「老板，我耳机里也在放《感恩的心》，只是是死亡金属版。」',en:'You decide office background music will "boost productivity." Your playlist: national anthem, sports march, and "Heart of Gratitude" on loop. Day 3: Dave shows up with noise-canceling headphones. You say he\'s "not integrating." He replies: "Boss, my headphones are playing \'Heart of Gratitude\' too. Just the death metal version."'},opts:[{text:{cn:'「取消BGM，让员工自选耳机，互不干扰」',en:'"Cancel BGM. Let employees use their own headphones. No interference."'},letter:'A',funds:0,anger:-10,madness:0,hint:'😡-10',extreme:false},{text:{cn:'「强制所有人听同一歌单，但换成『老板精选』——包括我的KTV录音、我的演讲音频」',en:'"Force everyone to listen to the same playlist — \'CEO\'s Picks.\' Includes my karaoke recordings and my speech audio."'},letter:'B',funds:0,anger:+25,madness:+20,hint:'😡+25 🤪+20',extreme:true},{text:{cn:'「根据员工心率数据自动播放音乐——心率低的放《运动员进行曲》，心率高的放《大悲咒》」',en:'"Auto-play based on heart rate data. Low heart rate = sports march. High heart rate = Buddhist chant."'},letter:'C',funds:-5,anger:+30,madness:+25,hint:'💰-5 😡+30 🤪+25',extreme:true}]},
+{id:49,tag:{cn:'🎭 团建2',en:'🎭 Team Build 2'},title:{cn:'团建2.0：荒野求生',en:'Team Building 2.0: Wilderness Survival'},bg:{cn:'HR提议「升级版团建」——把全员拉到荒岛，没收手机，只给一把刀和一包火柴，要求「48小时内建立秩序并完成任务」。你看着HR兴奋的脸，想起上次团建有人摔断了腿，公司赔了20万。',en:'HR proposes "Team Building 2.0" — strand everyone on a deserted island. Confiscate phones. One knife, one box of matches. "Establish order and complete missions within 48 hours." You look at HR\'s excited face. Remember last time: someone broke a leg. Company paid $30K.'},opts:[{text:{cn:'「取消荒岛计划，改室内密室逃脱，买保险，自愿参加」',en:'"Cancel island plan. Indoor escape room instead. Buy insurance. Voluntary participation."'},letter:'A',funds:-10,anger:-5,madness:0,hint:'💰-10 😡-5',extreme:false},{text:{cn:'「批准！但增加『CEO特别挑战』——我躲在岛上某处，第一个找到我的人年终奖翻倍」',en:'"Approved! Add \'CEO Special Challenge\' — I\'m hiding somewhere on the island. First to find me gets double year-end bonus."'},letter:'B',funds:-5,anger:+20,madness:+20,hint:'💰-5 😡+20 🤪+20',extreme:true},{text:{cn:'「把荒岛改成『公司新办公地点』——48小时后没完成任务的人，留在岛上『远程办公』」',en:'"Make the island the \'new office location.\' Anyone who doesn\'t complete the mission in 48 hours stays for \'remote work.\'"'},letter:'C',funds:+10,anger:+35,madness:+30,hint:'💰+10 😡+35 🤪+30',extreme:true}]},
+{id:50,tag:{cn:'🏆 终局',en:'🏆 Finale'},title:{cn:'上市前夜の最后考验',en:'The Final Test Before IPO'},bg:{cn:'明天就是IPO敲钟日。今晚，你独自坐在办公室里，回顾这一路的「管理」——员工走了几个，愤怒值多少，疯狂值几何。窗外是城市的灯火，你突然有点……空虚？不，一定是错觉。手机响了，是投行的人：「X总，明天的演讲稿您看了吗？」你看了眼那份5000字的稿子，第一行是：「感谢我的团队，没有他们就没有今天的成功。」你冷笑了一声。',en:'Tomorrow is IPO day. Tonight, you sit alone in your office, reviewing your "management" journey — how many left, anger levels, madness metrics. City lights outside. You suddenly feel… empty? No, must be imagination. Phone rings — investment bank: "Mr. X, did you review tomorrow\'s speech?" You glance at the 5,000-word draft. First line: "I thank my team. Without them, none of this would be possible." You smirk.'},opts:[{text:{cn:'「把演讲稿改成真实的感谢，给每个还在的员工发一封手写信」',en:'"Rewrite the speech with genuine thanks. Handwritten letter to every employee still here."'},letter:'A',funds:-10,anger:-20,madness:0,hint:'💰-10 😡-20',extreme:false},{text:{cn:'「演讲稿第一行改成：『这一切，都是我一个人的功劳』——然后看着台下记者的表情」',en:'"Change first line to: \'All of this is MY achievement alone.\' — Then watch the reporters\' faces."'},letter:'B',funds:+20,anger:+30,madness:+20,hint:'💰+20 😡+30 🤪+20',extreme:true},{text:{cn:'「取消演讲，改为直播『老板的一天』——从凌晨4点工作到敲钟，全程无剪辑」',en:'"Cancel speech. Livestream \'A Day in the Life\' — from 4 AM work session to the bell. Uncut."'},letter:'C',funds:+10,anger:+25,madness:+25,hint:'💰+10 😡+25 🤪+25',extreme:true}]}
+];
+
+/* ============ NEW GAME+ EXCLUSIVE EVENTS ============ */
+const EVENTS_NG=[
+{id:101,tag:{cn:'🌟 二周目',en:'🌟 New Game+'},title:{cn:'重生の真相',en:'The Truth of Rebirth'},bg:{cn:'【新游戏+专属】你又一次睁开了眼睛。但这一次，你记得一切。你记得上一次你是怎么把公司搞破产的/被员工推翻的/疯掉的。你看着镜子里的自己，露出了一个意味深长的笑容：「这一次，我要做得更……极致。」',en:'[New Game+ Exclusive] You open your eyes again. But this time, you remember everything. You remember how you bankrupted the company / got overthrown / went insane last time. You look in the mirror and smile: "This time, I\'ll go even… further."'},opts:[{text:{cn:'「带着前世的记忆，我要做一个『更好的』老板」',en:'"With memories of my past life, I\'ll be a \'better\' boss."'},letter:'A',funds:10,anger:-10,madness:0,hint:'💰+10 😡-10',extreme:false},{text:{cn:'「上一世我死得太憋屈了，这一世我要把所有人都踩在脚下！」',en:'"Last time I died pathetically. This time, EVERYONE bows to me!"'},letter:'B',funds:20,anger:+20,madness:+20,hint:'💰+20 😡+20 🤪+20',extreme:true},{text:{cn:'「这一世我要收集所有成就，成为真正的『完美暴君』」',en:'"This time I collect ALL achievements. Become the \'Perfect Tyrant.\'"'},letter:'C',funds:15,anger:+15,madness:+25,hint:'💰+15 😡+15 🤪+25',extreme:true}]},
+{id:102,tag:{cn:'👻 幽灵',en:'👻 Ghost'},title:{cn:'前任员工的诅咒',en:'The Ex-Employee\'s Curse'},bg:{cn:'【新游戏+专属】深夜加班时，你的电脑突然自动打开了一个文档。标题是《致下一任受害者》。内容是你上一世所有员工的联名信，详细记录了你的每一条「罪行」。最后一行：「我们等着看你怎么死第二次。」你环顾四周，办公室空无一人，但空调突然开了，温度降到了16度。',en:'[New Game+ Exclusive] Working late, your computer suddenly opens a document. Title: "To the Next Victim." It\'s a joint letter from all your past employees, documenting every "crime." Last line: "We\'ll watch you die a second time." You look around. Empty office. But the AC suddenly turns on. 60°F.'},opts:[{text:{cn:'「关掉文档，给所有前员工发和解邮件，承认错误」',en:'"Close the document. Send reconciliation emails to all former employees. Admit mistakes."'},letter:'A',funds:-10,anger:-15,madness:0,hint:'💰-10 😡-15',extreme:false},{text:{cn:'「把文档打印出来裱在墙上，标题改为『反对者的名单』，一个一个『处理』」',en:'"Print and frame it. Retitle: \'List of Dissenters.\' Handle them… one by one."'},letter:'B',funds:+10,anger:+30,madness:+25,hint:'💰+10 😡+30 🤪+25',extreme:true},{text:{cn:'「回复文档：『谢谢你们的反馈，这一世我会改进折磨方法，争取让你们死得更惨』」',en:'"Reply to the document: \'Thanks for the feedback. This time I\'ll improve my methods. Aim to make your suffering worse.\'"'},letter:'C',funds:0,anger:+25,madness:+30,hint:'😡+25 🤪+30',extreme:true}]},
+{id:103,tag:{cn:'🎭 面具',en:'🎭 Mask'},title:{cn:'双面老板',en:'The Two-Faced Boss'},bg:{cn:'【新游戏+专属】你发现自己有了一种奇怪的能力——可以在「暴君模式」和「圣人模式」之间切换。暴君模式下，员工恐惧但效率高；圣人模式下，员工爱戴但开始摸鱼。问题是：切换有冷却时间，而且每次切换后员工会怀疑你的精神状态。',en:'[New Game+ Exclusive] You discover a strange ability — toggle between "Tyrant Mode" and "Saint Mode." Tyrant: employees fear you but efficiency is high. Saint: employees love you but start slacking. Problem: toggle has cooldown, and each switch makes employees question your sanity.'},opts:[{text:{cn:'「保持圣人模式，用真诚和信任建立团队」',en:'"Stay in Saint Mode. Build team through sincerity and trust."'},letter:'A',funds:-10,anger:-20,madness:0,hint:'💰-10 😡-20',extreme:false},{text:{cn:'「暴君模式常驻！恐惧是最有效的管理工具！」',en:'"Tyrant Mode PERMANENT! Fear is the most effective management tool!"'},letter:'B',funds:+20,anger:+30,madness:+20,hint:'💰+20 😡+30 🤪+20',extreme:true},{text:{cn:'「随机切换，让员工永远猜不透我——这才是管理的艺术！」',en:'"Random toggling! Keep them guessing — THAT is the art of management!"'},letter:'C',funds:+10,anger:+25,madness:+30,hint:'💰+10 😡+25 🤪+30',extreme:true}]}
+];
+
+/* Combine all events */
+const EVENTS=EVENTS_BASE.concat(EVENTS_11_30).concat(EVENTS_31_50);
+/* ============ GAME STATE ============ */
+var state={
+  funds:100,anger:0,madness:0,round:0,
+  usedEvents:[],gameOver:false,
+  staff:[],extremeChain:0,normalChain:0,
+  achievements:[],ngPlus:false,unlockedNG:false,
+  allExtremeCount:0,allNormalCount:0,
+  maxFunds:100,maxAnger:0,maxMadness:0,
+  staffQuit:0,staffRebel:0,totalRounds:0
+};
+var lang='cn';
+var soundEnabled=false;
+var _currentEvent=null;
+
+/* ============ AUDIO ============ */
+var audioCtx=null;
+function initAudio(){if(!audioCtx){audioCtx=new(window.AudioContext||window.webkitAudioContext)();}}
+function playTone(freq,dur,type){
+  if(!soundEnabled||!audioCtx)return;
+  try{
+    var osc=audioCtx.createOscillator();
+    var gain=audioCtx.createGain();
+    osc.type=type||'sine';
+    osc.frequency.value=freq;
+    gain.gain.setValueAtTime(0.15,audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01,audioCtx.currentTime+dur);
+    osc.connect(gain);gain.connect(audioCtx.destination);
+    osc.start();osc.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+function playClick(){playTone(800,0.08,'sine');}
+function playExtreme(){playTone(200,0.3,'sawtooth');playTone(150,0.2,'square');}
+function playNormal(){playTone(600,0.15,'sine');playTone(800,0.15,'sine');}
+function playWin(){[523,659,784,1047].forEach(function(f,i){setTimeout(function(){playTone(f,0.2,'sine');},i*100);});}
+function playLose(){[400,350,300,200].forEach(function(f,i){setTimeout(function(){playTone(f,0.3,'sawtooth');},i*120);});}
+function playAchievement(){[880,1100,1320].forEach(function(f,i){setTimeout(function(){playTone(f,0.15,'sine');},i*80);});}
+
+function toggleSound(){
+  soundEnabled=!soundEnabled;
+  initAudio();
+  document.getElementById('sound-toggle').textContent=soundEnabled?'🔊':'🔇';
+}
+
+/* ============ HELPERS ============ */
+function t(key){var v=S[key];return v?((typeof v==='string')?v:v[lang]):key;}
+function tev(key,e){var v=e[key];return v?((typeof v==='string')?v:v[lang]):'';}
+function shuffle(arr){var a=arr.slice();for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+
+/* ============ STAFF SYSTEM ============ */
+function initStaff(){
+  state.staff=STAFF_TEMPLATE.map(function(s){
+    return{
+      id:s.id,emoji:s.emoji,name:tev('name',s),role:tev('role',s),
+      mood:50,resignThreshold:s.resignThreshold,rebelThreshold:s.rebelThreshold,
+      quit:false,rebel:false
+    };
+  });
+}
+
+function updateStaffMood(delta){
+  state.staff.forEach(function(s){
+    if(s.quit)return;
+    s.mood=clamp(s.mood+delta,0,100);
+    if(s.mood<=20&&!s.rebel){s.rebel=true;state.staffRebel++;checkAchievement('staff_rebel');}
+    if(s.mood<=10&&!s.quit){s.quit=true;state.staffQuit++;checkAchievement('staff_quit');}
+  });
+  renderStaff();
+}
+
+function renderStaff(){
+  var grid=document.getElementById('staff-grid');
+  if(!grid)return;
+  grid.innerHTML='';
+  var active=0;
+  state.staff.forEach(function(s){
+    if(!s.quit)active++;
+    var card=document.createElement('div');
+    card.className='staff-card'+(s.quit?' quit':'')+(s.rebel?' rebel':'');
+    var moodClass=s.mood>60?'mood-happy':s.mood>30?'mood-normal':'mood-angry';
+    var moodText=s.mood>60?(lang==='cn'?'开心':'Happy'):s.mood>30?(lang==='cn'?'一般':'OK'):(lang==='cn'?'愤怒':'Angry');
+    card.innerHTML='<div class="staff-emoji">'+s.emoji+'</div><div class="staff-name">'+s.name+'</div><div class="staff-role">'+s.role+'</div><div class="staff-mood '+moodClass+'">'+moodText+'</div>';
+    grid.appendChild(card);
+  });
+  var countEl=document.getElementById('staff-count');
+  if(countEl)countEl.textContent=active+'/'+state.staff.length;
+}
+
+/* ============ ACHIEVEMENT SYSTEM ============ */
+function checkAchievement(id){
+  if(state.achievements.indexOf(id)!==-1)return false;
+  state.achievements.push(id);
+  playAchievement();
+  updateAchCount();
+  if(state.achievements.length>=25)checkAchievement('all_achievements');
+  return true;
+}
+
+function checkAchievements(){
+  if(state.madness>=50)checkAchievement('madness_50');
+  if(state.anger>=50)checkAchievement('anger_50');
+  if(state.funds<=0)checkAchievement('funds_0');
+  if(state.allExtremeCount>=5)checkAchievement('all_extreme');
+  if(state.allNormalCount>=5)checkAchievement('all_normal');
+  if(state.extremeChain>=3)checkAchievement('chain_3');
+  if(state.extremeChain>=5)checkAchievement('chain_5');
+  if(state.round>=15)checkAchievement('survivor');
+  if(state.round>=25)checkAchievement('marathon');
+  if(state.funds>=150)checkAchievement('rich');
+  if(state.madness>=80&&!state.gameOver)checkAchievement('cult');
+  if(state.maxAnger<30&&state.round>5)checkAchievement('diplomat');
+  if(state.staffQuit>=3)checkAchievement('tyrant');
+  if(state.round<=10&&state.gameOver&&state._lastReason==='victory')checkAchievement('speedrun');
+  var activeStaff=state.staff.filter(function(s){return!s.quit;}).length;
+  if(activeStaff===0&&state.staff.length>0)checkAchievement('chaos');
+}
+
+function updateAchCount(){
+  var el=document.getElementById('ach-count');
+  if(el)el.textContent=state.achievements.length+'/'+ACHIEVEMENTS.length;
+}
+
+function renderAchievements(){
+  var grid=document.getElementById('ach-grid');
+  if(!grid)return;
+  grid.innerHTML='';
+  ACHIEVEMENTS.forEach(function(a){
+    var unlocked=state.achievements.indexOf(a.id)!==-1;
+    var cell=document.createElement('div');
+    cell.className='ach-cell'+(unlocked?' unlocked':'');
+    cell.innerHTML='<div class="ach-cell-icon">'+(unlocked?a.icon:'❓')+'</div><div class="ach-cell-name">'+tev('name',a)+'</div>';
+    grid.appendChild(cell);
+  });
+  var list=document.getElementById('ach-list');
+  if(list){
+    list.innerHTML='';
+    ACHIEVEMENTS.forEach(function(a){
+      var unlocked=state.achievements.indexOf(a.id)!==-1;
+      var span=document.createElement('span');
+      span.className='ach-item'+(unlocked?' unlocked':'');
+      span.textContent=unlocked?a.icon:'❓';
+      span.title=tev('name',a);
+      list.appendChild(span);
+    });
+  }
+}
+
+function showAchievements(){
+  renderAchievements();
+  document.getElementById('ach-modal').classList.add('show');
+}
+function hideAchievements(){
+  document.getElementById('ach-modal').classList.remove('show');
+}
+
+/* ============ CHAIN EVENTS ============ */
+function checkChainEvent(){
+  if(!state.ngPlus)return null;
+  if(state.extremeChain>=3&&Math.random()<0.3){
+    return EVENTS_NG[Math.floor(Math.random()*EVENTS_NG.length)];
+  }
+  return null;
+}
+
+function showChainBanner(text){
+  var banner=document.getElementById('chain-banner');
+  if(!banner)return;
+  banner.textContent=text;
+  banner.classList.add('show');
+  setTimeout(function(){banner.classList.remove('show');},3000);
+}
+
+/* ============ UI UPDATES ============ */
+function updateStats(){
+  document.getElementById('funds-bar').style.width=state.funds+'%';
+  document.getElementById('anger-bar').style.width=state.anger+'%';
+  document.getElementById('madness-bar').style.width=state.madness+'%';
+  document.getElementById('funds-val').textContent=state.funds;
+  document.getElementById('anger-val').textContent=state.anger;
+  document.getElementById('madness-val').textContent=state.madness;
+}
+
+function showToast(changes){
+  var old=document.querySelector('.toast');
+  if(old)old.remove();
+  var toast=document.createElement('div');
+  toast.className='toast';
+  [{val:changes.funds,emoji:'💰'},{val:changes.anger,emoji:'😡'},{val:changes.madness,emoji:'🤪'}].forEach(function(c){
+    if(c.val===0)return;
+    var span=document.createElement('span');
+    span.className='toast-item '+(c.val>0?'negative':'positive');
+    span.textContent=c.emoji+(c.val>0?'+':'')+c.val;
+    toast.appendChild(span);
+  });
+  document.getElementById('app').appendChild(toast);
+  setTimeout(function(){toast.remove();},1200);
+}
+
+/* ============ LANGUAGE SWITCH ============ */
+function switchLang(l){
+  lang=l;
+  document.getElementById('lang-en').className=l==='en'?'active':'';
+  document.getElementById('lang-cn').className=l==='cn'?'active':'';
+  document.getElementById('start-title').textContent=t('startTitle');
+  document.getElementById('start-sub').textContent=t('startSub');
+  document.getElementById('start-btn').textContent=t('startBtn');
+  document.getElementById('start-desc').innerHTML=t('startDesc');
+  document.getElementById('lbl-funds').textContent=t('lblFunds');
+  document.getElementById('lbl-anger').textContent=t('lblAnger');
+  document.getElementById('lbl-madness').textContent=t('lblMadness');
+  document.getElementById('restart-btn').textContent=t('restartBtn');
+  document.getElementById('staff-title-text').textContent=t('staffTitle');
+  if(document.getElementById('game-screen').classList.contains('active')&&!state.gameOver){
+    renderCurrentEvent();
+  }
+  if(document.getElementById('end-screen').classList.contains('active')){
+    renderEndScreen(state._lastReason);
+  }
+  renderStaff();
+}
+
+/* ============ GAME LOGIC ============ */
+function getAvailableEvents(){
+  var pool=EVENTS.slice();
+  if(state.ngPlus)pool=pool.concat(EVENTS_NG);
+  return pool.filter(function(e){return state.usedEvents.indexOf(e.id)===-1;});
+}
+
+function getNextEvent(){
+  var chainEvent=checkChainEvent();
+  if(chainEvent)return chainEvent;
+  var available=getAvailableEvents();
+  if(available.length===0)return null;
+  return available[Math.floor(Math.random()*available.length)];
+}
+
+function checkGameOver(){
+  if(state.funds<=0){endGame('bankrupt');return true;}
+  if(state.anger>=100){endGame('revolt');return true;}
+  if(state.madness>=100){endGame('insane');return true;}
+  var activeStaff=state.staff.filter(function(s){return!s.quit;}).length;
+  if(activeStaff===0&&state.staff.length>0){endGame('revolt');return true;}
+  if(state.usedEvents.length>=EVENTS.length+(state.ngPlus?EVENTS_NG.length:0)){endGame('victory');return true;}
+  return false;
+}
+
+function renderCurrentEvent(){
+  if(!_currentEvent)return;
+  var e=_currentEvent;
+  var roundStr=t('roundInfo').replace('{round}',state.round).replace('{done}',state.usedEvents.length);
+  document.getElementById('round-info').innerHTML=roundStr;
+  var card=document.getElementById('event-card');
+  card.style.animation='none';card.offsetHeight;card.style.animation='slideUp .4s ease-out';
+  document.getElementById('event-tag').textContent=tev('tag',e);
+  document.getElementById('event-title').textContent=tev('title',e);
+  document.getElementById('event-bg').textContent=tev('bg',e);
+  var optsArea=document.getElementById('options-area');
+  optsArea.innerHTML='';
+  var clsMap=['opt-a','opt-b','opt-c'];
+  e.opts.forEach(function(opt,i){
+    var btn=document.createElement('button');
+    btn.className='option-btn '+clsMap[i];
+    btn.innerHTML='<span class="opt-letter">'+opt.letter+'</span><div><div>'+tev('text',opt)+'</div><div class="effect-hint">'+opt.hint+'</div></div>';
+    btn.onclick=function(){
+      if(state.gameOver)return;
+      playClick();
+      var allBtns=document.querySelectorAll('.option-btn');
+      for(var k=0;k<allBtns.length;k++)allBtns[k].classList.add('disabled');
+      state.funds=clamp(state.funds+opt.funds,0,100);
+      state.anger=clamp(state.anger+opt.anger,0,100);
+      state.madness=clamp(state.madness+opt.madness,0,100);
+      state.maxFunds=Math.max(state.maxFunds,state.funds);
+      state.maxAnger=Math.max(state.maxAnger,state.anger);
+      state.maxMadness=Math.max(state.maxMadness,state.madness);
+      if(opt.extreme){
+        state.extremeChain++;
+        state.normalChain=0;
+        state.allExtremeCount++;
+        playExtreme();
+        updateStaffMood(-15);
+      }else{
+        state.normalChain++;
+        state.extremeChain=0;
+        state.allNormalCount++;
+        playNormal();
+        updateStaffMood(+5);
+      }
+      updateStats();
+      showToast({funds:opt.funds,anger:opt.anger,madness:opt.madness});
+      if(opt.anger>=25||opt.madness>=20){
+        document.getElementById('app').classList.add('shake');
+        setTimeout(function(){document.getElementById('app').classList.remove('shake');},500);
+      }
+      checkAchievements();
+      setTimeout(function(){
+        if(!checkGameOver()){
+          renderEvent();
+        }
+      },800+Math.random()*400);
+    };
+    optsArea.appendChild(btn);
+  });
+}
+
+function renderEvent(){
+  var e=getNextEvent();
+  if(!e){endGame('victory');return;}
+  _currentEvent=e;
+  state.usedEvents.push(e.id);
+  state.round++;
+  state.totalRounds++;
+  if(state.extremeChain>=3){
+    showChainBanner(lang==='cn'?'⚡ 极端连锁 x'+state.extremeChain+'！员工们开始害怕了...':'⚡ Extreme Chain x'+state.extremeChain+'! Staff are getting scared...');
+  }
+  renderCurrentEvent();
+}
+
+/* ============ SCREEN TRANSITIONS ============ */
+function showScreen(id){
+  ['start-screen','game-screen','end-screen'].forEach(function(s){
+    document.getElementById(s).classList.remove('active');
+  });
+  document.getElementById(id).classList.add('active');
+}
+
+/* ============ END GAME ============ */
+function renderEndScreen(reason){
+  state._lastReason=reason;
+  var ending=S[reason];
+  document.getElementById('end-emoji').textContent=ending.emoji;
+  document.getElementById('end-title').textContent=tev('title',ending);
+  document.getElementById('end-title').style.color=reason==='victory'?'#ffd700':'#ff6b35';
+  document.getElementById('end-desc').innerHTML=tev('desc',ending);
+  document.getElementById('end-funds').textContent=state.funds;
+  document.getElementById('end-anger').textContent=state.anger;
+  document.getElementById('end-madness').textContent=state.madness;
+  document.getElementById('end-fl').textContent=t('endFl');
+  document.getElementById('end-al').textContent=t('endAl');
+  document.getElementById('end-ml').textContent=t('endMl');
+  renderAchievements();
+}
+
+function endGame(reason){
+  state.gameOver=true;
+  checkAchievements();
+  if(reason==='victory'){
+    playWin();
+    if(!state.unlockedNG){
+      state.unlockedNG=true;
+      checkAchievement('ng_plus');
+    }
+    if(state.allNormalCount>=state.round)checkAchievement('pacifist');
+  }else{
+    playLose();
+  }
+  showScreen('end-screen');
+  renderEndScreen(reason);
+}
+
+/* ============ START / RESTART ============ */
+function startGame(){
+  var wasNG=state.ngPlus;
+  state={
+    funds:wasNG?120:100,anger:0,madness:0,round:0,
+    usedEvents:[],gameOver:false,
+    staff:[],extremeChain:0,normalChain:0,
+    achievements:state.achievements||[],ngPlus:wasNG,unlockedNG:state.unlockedNG||false,
+    allExtremeCount:0,allNormalCount:0,
+    maxFunds:wasNG?120:100,maxAnger:0,maxMadness:0,
+    staffQuit:0,staffRebel:0,totalRounds:state.totalRounds||0
+  };
+  initStaff();
+  _currentEvent=null;
+  updateStats();
+  updateAchCount();
+  renderStaff();
+  showScreen('game-screen');
+  renderEvent();
+}
+
+function restartGame(){
+  showScreen('start-screen');
+  var ngEl=document.getElementById('new-game-plus');
+  if(state.unlockedNG){
+    ngEl.classList.add('show');
+    ngEl.innerHTML=(lang==='cn'?'🌟 新游戏+ 已解锁！':'🌟 New Game+ Unlocked!')+'<br><small>'+(lang==='cn'?'初始资金+20，解锁隐藏事件':'Start with +20 funds, unlock hidden events')+'</small><br><button onclick="startNGPlus()" style="margin-top:8px;padding:8px 16px;background:rgba(255,215,0,.3);border:1px solid #ffd700;border-radius:8px;color:#ffd700;cursor:pointer;">'+(lang==='cn'?'开始二周目':'Start New Game+')+'</button>';
+  }
+}
+
+function startNGPlus(){
+  state.ngPlus=true;
+  startGame();
+}
+
+/* ============ SHARE ============ */
+function shareResult(){
+  var text=lang==='cn'
+    ?'我在《社畜重生：老板模拟器》中'+state.round+'轮后'+S[state._lastReason].emoji+'！资金'+state.funds+' 愤怒'+state.anger+' 疯狂'+state.madness+'。解锁了'+state.achievements.length+'个成就！你能超越我吗？'
+    :'I played Corporate Overlord Simulator and '+state._lastReason+' after '+state.round+' rounds! Funds:'+state.funds+' Anger:'+state.anger+' Madness:'+state.madness+'. Unlocked '+state.achievements.length+' achievements! Can you beat me?';
+  if(navigator.share){
+    navigator.share({title:lang==='cn'?'社畜重生：老板模拟器':'Corporate Overlord Simulator',text:text});
+  }else{
+    var ta=document.createElement('textarea');
+    ta.value=text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert(lang==='cn'?'成绩已复制到剪贴板！':'Score copied to clipboard!');
+  }
+}
+
+/* ============ INIT ============ */
+updateStats();
+updateAchCount();
+switchLang('cn');
+</script>
+</body>
+</html>
