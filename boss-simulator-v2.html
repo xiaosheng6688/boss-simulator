@@ -154,8 +154,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica N
     你能撑到上市，还是会被员工推翻？
   </div>
   <button class="start-btn" id="start-btn" onclick="startGame()">开始折磨 · Start Torture</button>
+  <div style="margin-top:12px;display:flex;gap:10px;justify-content:center;">
+    <button onclick="showShop()" style="padding:10px 20px;background:rgba(255,215,0,.15);border:1px solid rgba(255,215,0,.3);border-radius:12px;color:#ffd700;font-size:13px;cursor:pointer;">🏪 商店 · Shop</button>
+    <button onclick="showAd('reward')" style="padding:10px 20px;background:rgba(233,69,96,.15);border:1px solid rgba(233,69,96,.3);border-radius:12px;color:#e94560;font-size:13px;cursor:pointer;">📺 广告 · Ad</button>
+  </div>
   <div class="new-game-plus" id="new-game-plus"></div>
-  <div class="version-info">v2.0 · 50+ Events · New Game+</div>
+  <div class="version-info">v2.1 · Shop · Ads · Coins</div>
 </div>
 
 <!-- GAME SCREEN -->
@@ -268,6 +272,31 @@ const S={
   endFl:{cn:'资金',en:'Funds'},
   endAl:{cn:'愤怒',en:'Anger'},
   endMl:{cn:'疯狂',en:'Madness'},
+  coins:{cn:'💰 金币',en:'💰 Coins'},
+  watchAd:{cn:'📺 观看广告 (+5金币)',en:'📺 Watch Ad (+5 Coins)'},
+  skipAd:{cn:'跳过',en:'Skip'},
+  adReviveTitle:{cn:'复活机会',en:'Revive Chance'},
+  adReviveDesc:{cn:'观看广告复活一次，继续你的统治！',en:'Watch an ad to revive and continue your reign!'},
+  adDoubleTitle:{cn:'双倍奖励',en:'Double Reward'},
+  adDoubleDesc:{cn:'观看广告获得双倍金币奖励！',en:'Watch an ad for double coin rewards!'},
+  adRewardTitle:{cn:'额外奖励',en:'Extra Reward'},
+  adRewardDesc:{cn:'观看广告获得5个金币！',en:'Watch an ad to get 5 coins!'},
+  shopTitle:{cn:'金币商店',en:'Coin Shop'},
+  itemRemoveAds:{cn:'移除广告',en:'Remove Ads'},
+  descRemoveAds:{cn:'永久移除所有广告',en:'Permanently remove all ads'},
+  itemFunds:{cn:'资金包',en:'Funds Pack'},
+  descFunds:{cn:'获得+30资金',en:'Get +30 funds'},
+  itemHint:{cn:'提示包',en:'Hint Pack'},
+  descHint:{cn:'显示最佳选择提示',en:'Show best choice hints'},
+  itemTheme:{cn:'暗黑主题',en:'Dark Theme'},
+  descTheme:{cn:'解锁专属暗黑界面',en:'Unlock exclusive dark UI'},
+  buy:{cn:'购买',en:'Buy'},
+  notEnough:{cn:'金币不足',en:'Not Enough'},
+  close:{cn:'关闭',en:'Close'},
+  adsRemoved:{cn:'广告已移除！',en:'Ads removed!'},
+  fundsAdded:{cn:'资金+30！',en:'Funds +30!'},
+  hintUnlocked:{cn:'提示功能已解锁！',en:'Hints unlocked!'},
+  themeUnlocked:{cn:'主题已解锁！',en:'Theme unlocked!'},
   bankrupt:{cn:{title:'💸 公司破产',desc:'你把公司资金链玩断了。现在你和员工一起站在了劳动仲裁的被告席上。'},en:{title:'💸 Bankrupt',desc:'You ran the company into the ground. Now you\'re all in arbitration together.'}},
   revolt:{cn:{title:'🔥 员工起义',desc:'愤怒值爆表！全体员工集体辞职并把你挂上了脉脉热搜。你的"管理哲学"成为了行业反面教材。'},en:{title:'🔥 Staff Revolt',desc:'Anger maxed out! Everyone quit and you\'re trending on LinkedIn. Your "management philosophy" is now a case study in what NOT to do.'}},
   insane:{cn:{title:'🌀 精神失常',desc:'疯狂值爆表！你开始穿着睡衣来公司，在全员大会上朗诵《道德经》，并试图用塔罗牌决定产品方向。董事会强制你"休养"。'},en:{title:'🌀 Lost Your Mind',desc:'Madness maxed out! You started wearing pajamas to board meetings and using tarot cards to decide product direction. The board "suggested" you take a break.'}},
@@ -389,7 +418,8 @@ var state={
   achievements:[],ngPlus:false,unlockedNG:false,
   allExtremeCount:0,allNormalCount:0,
   maxFunds:100,maxAnger:0,maxMadness:0,
-  staffQuit:0,staffRebel:0,totalRounds:0
+  staffQuit:0,staffRebel:0,totalRounds:0,
+  coins:0,watchCount:0,adEnabled:true
 };
 var lang='cn';
 var soundEnabled=false;
@@ -445,8 +475,8 @@ function updateStaffMood(delta){
   state.staff.forEach(function(s){
     if(s.quit)return;
     s.mood=clamp(s.mood+delta,0,100);
-    if(s.mood<=20&&!s.rebel){s.rebel=true;state.staffRebel++;checkAchievement('staff_rebel');}
     if(s.mood<=10&&!s.quit){s.quit=true;s.rebel=false;state.staffQuit++;checkAchievement('staff_quit');}
+    else if(s.mood<=20&&!s.rebel&&!s.quit){s.rebel=true;state.staffRebel++;checkAchievement('staff_rebel');}
   });
   renderStaff();
 }
@@ -624,9 +654,9 @@ function checkGameOver(){
   if(state.funds<=0){endGame('bankrupt');return true;}
   if(state.anger>=100){endGame('revolt');return true;}
   if(state.madness>=100){endGame('insane');return true;}
-  var activeStaff=state.staff.filter(function(s){return!s.quit;}).length;
+  var activeStaff=state.staff.filter(function(s){return!s.quit&&!s.rebel;}).length;
   if(activeStaff===0&&state.staff.length>0){endGame('revolt');return true;}
-  if(state.round>=20){endGame('victory');return true;}
+  if(state.round>=20&&state.usedEvents.length>=20){endGame('victory');return true;}
   return false;
 }
 
@@ -689,6 +719,7 @@ function renderCurrentEvent(){
 }
 
 function renderEvent(){
+  if(checkGameOver())return;
   var e=getNextEvent();
   if(!e){endGame('victory');return;}
   _currentEvent=e;
@@ -746,6 +777,8 @@ function endGame(reason){
 /* ============ START / RESTART ============ */
 function startGame(){
   var wasNG=state.ngPlus;
+  var savedCoins=state.coins||0;
+  var savedWatch=state.watchCount||0;
   state={
     funds:wasNG?120:100,anger:0,madness:0,round:0,
     usedEvents:[],gameOver:false,
@@ -753,7 +786,8 @@ function startGame(){
     achievements:state.achievements||[],ngPlus:wasNG,unlockedNG:state.unlockedNG||false,
     allExtremeCount:0,allNormalCount:0,
     maxFunds:wasNG?120:100,maxAnger:0,maxMadness:0,
-    staffQuit:0,staffRebel:0,totalRounds:state.totalRounds||0
+    staffQuit:0,staffRebel:0,totalRounds:state.totalRounds||0,
+    coins:savedCoins,watchCount:savedWatch,adEnabled:state.adEnabled!==false
   };
   initStaff();
   _currentEvent=null;
@@ -765,6 +799,7 @@ function startGame(){
 }
 
 function restartGame(){
+  state.ngPlus=false;
   showScreen('start-screen');
   var ngEl=document.getElementById('new-game-plus');
   if(state.unlockedNG){
@@ -796,7 +831,138 @@ function shareResult(){
   }
 }
 
+/* ============ AD SYSTEM ============ */
+function showAd(type, callback){
+  if(!state.adEnabled){
+    if(callback)callback();
+    return;
+  }
+  var adOverlay=document.createElement('div');
+  adOverlay.id='ad-overlay';
+  adOverlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+  
+  var adContent=document.createElement('div');
+  adContent.style.cssText='background:#1a1a2e;border-radius:16px;padding:24px;max-width:320px;width:100%;text-align:center;border:1px solid rgba(255,255,255,.1);';
+  
+  var title=type==='revive'?t('adReviveTitle'):type==='double'?t('adDoubleTitle'):t('adRewardTitle');
+  var desc=type==='revive'?t('adReviveDesc'):type==='double'?t('adDoubleDesc'):t('adRewardDesc');
+  
+  adContent.innerHTML='<div style="font-size:48px;margin-bottom:12px;">📺</div><div style="font-size:18px;font-weight:700;margin-bottom:8px;color:#fff;">'+title+'</div><div style="font-size:13px;color:#888;margin-bottom:20px;line-height:1.5;">'+desc+'</div>';
+  
+  var watchBtn=document.createElement('button');
+  watchBtn.textContent=t('watchAd');
+  watchBtn.style.cssText='width:100%;padding:14px;background:linear-gradient(135deg,#e94560,#ff6b35);border:none;border-radius:12px;color:#fff;font-size:16px;font-weight:700;cursor:pointer;margin-bottom:10px;';
+  watchBtn.onclick=function(){
+    state.watchCount++;
+    state.coins+=5;
+    saveGame();
+    document.body.removeChild(adOverlay);
+    if(callback)callback(true);
+  };
+  
+  var skipBtn=document.createElement('button');
+  skipBtn.textContent=t('skipAd');
+  skipBtn.style.cssText='width:100%;padding:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#888;font-size:14px;cursor:pointer;';
+  skipBtn.onclick=function(){
+    document.body.removeChild(adOverlay);
+    if(callback)callback(false);
+  };
+  
+  adContent.appendChild(watchBtn);
+  adContent.appendChild(skipBtn);
+  adOverlay.appendChild(adContent);
+  document.body.appendChild(adOverlay);
+}
+
+function showShop(){
+  var shopOverlay=document.createElement('div');
+  shopOverlay.id='shop-overlay';
+  shopOverlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:1000;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;';
+  
+  var shopContent=document.createElement('div');
+  shopContent.style.cssText='background:#1a1a2e;border-radius:16px;padding:24px;max-width:340px;width:100%;text-align:center;border:1px solid rgba(255,255,255,.1);max-height:80vh;overflow-y:auto;';
+  
+  shopContent.innerHTML='<div style="font-size:32px;margin-bottom:8px;">🏪</div><div style="font-size:20px;font-weight:700;margin-bottom:4px;color:#fff;">'+t('shopTitle')+'</div><div style="font-size:13px;color:#888;margin-bottom:16px;">'+t('coins')+': <span style="color:#ffd700;font-weight:700;">'+(state.coins||0)+'</span> 💰</div>';
+  
+  var items=[
+    {id:'remove_ads',icon:'🚫',name:t('itemRemoveAds'),desc:t('descRemoveAds'),price:50},
+    {id:'funds_pack',icon:'💵',name:t('itemFunds'),desc:t('descFunds'),price:10},
+    {id:'hint_pack',icon:'💡',name:t('itemHint'),desc:t('descHint'),price:5},
+    {id:'theme_dark',icon:'🌙',name:t('itemTheme'),desc:t('descTheme'),price:20}
+  ];
+  
+  items.forEach(function(item){
+    var itemDiv=document.createElement('div');
+    itemDiv.style.cssText='background:rgba(255,255,255,.03);border-radius:12px;padding:12px;margin-bottom:10px;display:flex;align-items:center;gap:12px;text-align:left;';
+    itemDiv.innerHTML='<div style="font-size:28px;">'+item.icon+'</div><div style="flex:1;"><div style="font-size:14px;font-weight:600;color:#fff;">'+item.name+'</div><div style="font-size:12px;color:#888;margin-top:2px;">'+item.desc+'</div></div><div style="text-align:right;"><div style="font-size:16px;font-weight:700;color:#ffd700;">'+item.price+'💰</div></div>';
+    
+    var buyBtn=document.createElement('button');
+    buyBtn.textContent=(state.coins||0)>=item.price?t('buy'):t('notEnough');
+    buyBtn.style.cssText='padding:6px 14px;background:'+((state.coins||0)>=item.price?'linear-gradient(135deg,#27ae60,#2ecc71)':'#555')+';border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:600;cursor:pointer;margin-top:6px;width:100%;';
+    buyBtn.disabled=(state.coins||0)<item.price;
+    buyBtn.onclick=function(){
+      if((state.coins||0)>=item.price){
+        state.coins-=item.price;
+        if(item.id==='remove_ads'){
+          state.adEnabled=false;
+          alert(t('adsRemoved'));
+        }else if(item.id==='funds_pack'){
+          state.funds=Math.min(state.funds+30,150);
+          updateStats();
+          alert(t('fundsAdded'));
+        }else if(item.id==='hint_pack'){
+          alert(t('hintUnlocked'));
+        }else if(item.id==='theme_dark'){
+          alert(t('themeUnlocked'));
+        }
+        saveGame();
+        document.body.removeChild(shopOverlay);
+        showShop();
+      }
+    };
+    
+    itemDiv.appendChild(buyBtn);
+    shopContent.appendChild(itemDiv);
+  });
+  
+  var closeBtn=document.createElement('button');
+  closeBtn.textContent=t('close');
+  closeBtn.style.cssText='width:100%;padding:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#888;font-size:14px;cursor:pointer;margin-top:10px;';
+  closeBtn.onclick=function(){
+    document.body.removeChild(shopOverlay);
+  };
+  shopContent.appendChild(closeBtn);
+  shopOverlay.appendChild(shopContent);
+  document.body.appendChild(shopOverlay);
+}
+
+function saveGame(){
+  try{
+    localStorage.setItem('boss_sim_save',JSON.stringify({
+      achievements:state.achievements,
+      unlockedNG:state.unlockedNG,
+      coins:state.coins,
+      watchCount:state.watchCount,
+      adEnabled:state.adEnabled,
+      totalRounds:state.totalRounds
+    }));
+  }catch(e){}
+}
+
+function loadGame(){
+  try{
+    var saved=JSON.parse(localStorage.getItem('boss_sim_save')||'{}');
+    if(saved.achievements)state.achievements=saved.achievements;
+    if(saved.unlockedNG)state.unlockedNG=saved.unlockedNG;
+    if(saved.coins)state.coins=saved.coins;
+    if(saved.watchCount)state.watchCount=saved.watchCount;
+    if(saved.adEnabled!==undefined)state.adEnabled=saved.adEnabled;
+    if(saved.totalRounds)state.totalRounds=saved.totalRounds;
+  }catch(e){}
+}
+
 /* ============ INIT ============ */
+loadGame();
 updateStats();
 updateAchCount();
 switchLang('cn');
