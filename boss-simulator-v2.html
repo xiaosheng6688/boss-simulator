@@ -446,7 +446,7 @@ function updateStaffMood(delta){
     if(s.quit)return;
     s.mood=clamp(s.mood+delta,0,100);
     if(s.mood<=20&&!s.rebel){s.rebel=true;state.staffRebel++;checkAchievement('staff_rebel');}
-    if(s.mood<=10&&!s.quit){s.quit=true;state.staffQuit++;checkAchievement('staff_quit');}
+    if(s.mood<=10&&!s.quit){s.quit=true;s.rebel=false;state.staffQuit++;checkAchievement('staff_quit');}
   });
   renderStaff();
 }
@@ -612,7 +612,10 @@ function getAvailableEvents(){
 function getNextEvent(){
   var chainEvent=checkChainEvent();
   if(chainEvent)return chainEvent;
-  var available=getAvailableEvents();
+  var available=getAvailableEvents().filter(function(e){
+    if(e.id===50)return state.round>=15;
+    return true;
+  });
   if(available.length===0)return null;
   return available[Math.floor(Math.random()*available.length)];
 }
@@ -623,7 +626,7 @@ function checkGameOver(){
   if(state.madness>=100){endGame('insane');return true;}
   var activeStaff=state.staff.filter(function(s){return!s.quit;}).length;
   if(activeStaff===0&&state.staff.length>0){endGame('revolt');return true;}
-  if(state.usedEvents.length>=EVENTS.length+(state.ngPlus?EVENTS_NG.length:0)){endGame('victory');return true;}
+  if(state.round>=20){endGame('victory');return true;}
   return false;
 }
 
@@ -649,7 +652,7 @@ function renderCurrentEvent(){
       playClick();
       var allBtns=document.querySelectorAll('.option-btn');
       for(var k=0;k<allBtns.length;k++)allBtns[k].classList.add('disabled');
-      state.funds=clamp(state.funds+opt.funds,0,100);
+      state.funds=clamp(state.funds+opt.funds,0,150);
       state.anger=clamp(state.anger+opt.anger,0,100);
       state.madness=clamp(state.madness+opt.madness,0,100);
       state.maxFunds=Math.max(state.maxFunds,state.funds);
@@ -732,7 +735,7 @@ function endGame(reason){
       state.unlockedNG=true;
       checkAchievement('ng_plus');
     }
-    if(state.allNormalCount>=state.round)checkAchievement('pacifist');
+    if(state.allNormalCount>=state.round&&state.allExtremeCount===0)checkAchievement('pacifist');
   }else{
     playLose();
   }
